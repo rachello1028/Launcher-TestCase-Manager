@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useStore } from '../hooks/useStore';
 import { CATEGORY_LABELS, type ModelId, type CategoryId, type TestStatus } from '../types';
 import { getCasesForModel, getResultKey, updateResult, getModelLabel } from '../store';
-import { CheckCircle2, XCircle, SkipForward, Clock, ExternalLink, MessageSquare, ChevronDown, ChevronRight } from 'lucide-react';
+import { createJiraIssue } from '../jira';
+import { CheckCircle2, XCircle, SkipForward, Clock, ExternalLink, MessageSquare, ChevronDown, ChevronRight, Loader2 } from 'lucide-react';
 
 const STATUS_CONFIG: Record<TestStatus, { icon: typeof CheckCircle2; label: string; className: string }> = {
   pass: { icon: CheckCircle2, label: 'Pass', className: 'text-emerald-ink' },
@@ -18,6 +19,7 @@ export function Checklist() {
   const [collapsedCats, setCollapsedCats] = useState<Set<string>>(new Set());
   const [editingNote, setEditingNote] = useState<string | null>(null);
   const [noteText, setNoteText] = useState('');
+  const [creatingJira, setCreatingJira] = useState<string | null>(null);
 
   if (!round) {
     return (
@@ -50,18 +52,31 @@ export function Checklist() {
     updateResult(round.id, caseId, currentModel, next, round.results[key]?.notes || '');
   };
 
-  const openJira = (caseId: string, caseName: string, category: CategoryId) => {
+  const handleCreateJira = async (caseId: string, caseName: string, category: CategoryId) => {
+    const key = getResultKey(caseId, currentModel);
+    if (creatingJira) return;
+    setCreatingJira(key);
+
     const summary = `[${round.version}][${getModelLabel(currentModel)}] ${CATEGORY_LABELS[category]} — ${caseName}`;
     const description = [
-      `*版本*: ${round.version}`,
-      `*機型*: ${getModelLabel(currentModel)}`,
-      `*分類*: ${CATEGORY_LABELS[category]}`,
-      `*案例*: ${caseName}`,
+      `版本: ${round.version}`,
+      `機型: ${getModelLabel(currentModel)}`,
+      `分類: ${CATEGORY_LABELS[category]}`,
+      `案例: ${caseName}`,
       '',
-      '*問題描述*:',
-      round.results[getResultKey(caseId, currentModel)]?.notes || '(請補充)',
+      '問題描述:',
+      round.results[key]?.notes || '(請補充)',
     ].join('\n');
-    window.open(`https://cybersoft4u.atlassian.net/jira/software/c/projects/ED/issues/create?summary=${encodeURIComponent(summary)}&description=${encodeURIComponent(description)}`, '_blank');
+
+    const result = await createJiraIssue(summary, description);
+    setCreatingJira(null);
+
+    if (result.success) {
+      updateResult(round.id, caseId, currentModel, 'fail', round.results[key]?.notes || '', result.key);
+      window.open(result.url, '_blank');
+    } else {
+      alert(`建立 Jira Issue 失敗：${result.message}`);
+    }
   };
 
   const saveNote = (caseId: string) => {
@@ -192,14 +207,26 @@ export function Checklist() {
                         >
                           <MessageSquare size={14} />
                         </button>
-                        {status === 'fail' && (
+                        {status === 'fail' && !result?.jiraKey && (
                           <button
-                            onClick={() => openJira(c.id, c.name, c.category)}
-                            className="p-1.5 rounded text-red-ink hover:bg-red-soft"
+                            onClick={() => handleCreateJira(c.id, c.name, c.category)}
+                            disabled={creatingJira === key}
+                            className="p-1.5 rounded text-red-ink hover:bg-red-soft disabled:opacity-50"
                             title="建立 Jira Issue"
                           >
-                            <ExternalLink size={14} />
+                            {creatingJira === key ? <Loader2 size={14} className="animate-spin" /> : <ExternalLink size={14} />}
                           </button>
+                        )}
+                        {result?.jiraKey && (
+                          <a
+                            href={`https://cybersoft4u.atlassian.net/browse/${result.jiraKey}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-1.5 py-0.5 rounded text-xs font-mono bg-red-soft text-red-ink hover:underline"
+                            title={`開啟 ${result.jiraKey}`}
+                          >
+                            {result.jiraKey}
+                          </a>
                         )}
                       </div>
                     </div>
