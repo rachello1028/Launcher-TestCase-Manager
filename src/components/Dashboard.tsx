@@ -1,7 +1,7 @@
 import { useStore } from '../hooks/useStore';
 import { CATEGORY_LABELS, type CategoryId } from '../types';
 import { getCasesForModel, getResultKey, getModelLabel } from '../store';
-import { BarChart3, CheckCircle2, XCircle, Clock, SkipForward } from 'lucide-react';
+import { BarChart3, CheckCircle2, XCircle, Clock } from 'lucide-react';
 
 export function Dashboard() {
   const { rounds, activeRoundId } = useStore();

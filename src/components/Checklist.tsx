@@ -4,8 +4,6 @@ import { CATEGORY_LABELS, type ModelId, type CategoryId, type TestStatus } from 
 import { getCasesForModel, getResultKey, updateResult, getModelLabel } from '../store';
 import { CheckCircle2, XCircle, SkipForward, Clock, ExternalLink, MessageSquare, ChevronDown, ChevronRight } from 'lucide-react';
 
-const JIRA_BASE = 'https://cybersoft4u.atlassian.net/jira/software/c/projects/ED/boards/246';
-
 const STATUS_CONFIG: Record<TestStatus, { icon: typeof CheckCircle2; label: string; className: string }> = {
   pass: { icon: CheckCircle2, label: 'Pass', className: 'text-emerald-ink' },
   fail: { icon: XCircle, label: 'Fail', className: 'text-red-ink' },
@@ -63,7 +61,6 @@ export function Checklist() {
       '*問題描述*:',
       round.results[getResultKey(caseId, currentModel)]?.notes || '(請補充)',
     ].join('\n');
-    const url = `https://cybersoft4u.atlassian.net/jira/software/c/projects/ED/issues/?jql=&createForm={"summary":"${encodeURIComponent(summary)}","description":"${encodeURIComponent(description)}"}`;
     window.open(`https://cybersoft4u.atlassian.net/jira/software/c/projects/ED/issues/create?summary=${encodeURIComponent(summary)}&description=${encodeURIComponent(description)}`, '_blank');
   };
 

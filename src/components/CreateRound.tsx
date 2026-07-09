@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { ModelId } from '../types';
-import { createRound, getAllModelIds, getModelLabel } from '../store';
+import { createRound, getModelLabel } from '../store';
 import { useStore } from '../hooks/useStore';
 import { Plus, X } from 'lucide-react';
 

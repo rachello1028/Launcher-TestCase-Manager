@@ -1,4 +1,4 @@
-import type { AppState, TestCase, TestRound, TestResult, ModelId, ModelDef, TestStatus } from './types';
+import type { AppState, TestCase, TestRound, TestResult, ModelId, TestStatus } from './types';
 import { DEFAULT_CASES } from './masterData';
 import { DEFAULT_MODELS } from './types';
 
