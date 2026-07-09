@@ -14,6 +14,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const token = process.env.JIRA_TOKEN;
   const baseUrl = process.env.JIRA_BASE_URL;
   const projectKey = process.env.JIRA_PROJECT_KEY;
+  const assigneeId = process.env.JIRA_ASSIGNEE_ID;
 
   if (!email || !token || !baseUrl || !projectKey) {
     return res.status(500).json({ error: 'Jira env vars not configured' });
@@ -44,6 +45,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             ],
           },
           issuetype: { name: 'Bug' },
+          ...(assigneeId ? { assignee: { accountId: assigneeId } } : {}),
         },
       }),
     });
