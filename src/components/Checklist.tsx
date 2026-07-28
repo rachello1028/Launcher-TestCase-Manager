@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useStore } from '../hooks/useStore';
-import { CATEGORY_LABELS, type ModelId, type CategoryId, type TestStatus } from '../types';
-import { getCasesForModel, getResultKey, updateResult, getModelLabel } from '../store';
+import type { ModelId, CategoryId, TestStatus } from '../types';
+import { getCasesForModel, getResultKey, updateResult, getModelLabel, getCategoryLabel } from '../store';
 import { createJiraIssue } from '../jira';
 import { CheckCircle2, XCircle, SkipForward, Clock, ExternalLink, MessageSquare, ChevronDown, ChevronRight, Loader2 } from 'lucide-react';
 
@@ -57,11 +57,11 @@ export function Checklist() {
     if (creatingJira) return;
     setCreatingJira(key);
 
-    const summary = `[${round.version}][${getModelLabel(currentModel)}] ${CATEGORY_LABELS[category]} — ${caseName}`;
+    const summary = `[${round.version}][${getModelLabel(currentModel)}] ${getCategoryLabel(category)} — ${caseName}`;
     const description = [
       `版本: ${round.version}`,
       `機型: ${getModelLabel(currentModel)}`,
-      `分類: ${CATEGORY_LABELS[category]}`,
+      `分類: ${getCategoryLabel(category)}`,
       `案例: ${caseName}`,
       '',
       '問題描述:',
@@ -137,7 +137,7 @@ export function Checklist() {
             >
               <div className="flex items-center gap-2">
                 {collapsed ? <ChevronRight size={16} className="text-fg-subtle" /> : <ChevronDown size={16} className="text-fg-subtle" />}
-                <h3 className="font-medium text-fg">{CATEGORY_LABELS[cat]}</h3>
+                <h3 className="font-medium text-fg">{getCategoryLabel(cat)}</h3>
               </div>
               <span className="text-xs font-mono text-fg-subtle">{catDone}/{catCases.length}</span>
             </button>

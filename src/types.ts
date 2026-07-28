@@ -16,26 +16,23 @@ export const DEFAULT_MODELS: ModelDef[] = [
   { id: 'A50', label: 'A50' },
 ];
 
-export type CategoryId =
-  | 'params'
-  | 'function'
-  | 'transaction'
-  | 'settlement'
-  | 'boot'
-  | 'external'
-  | 'version'
-  | 'statusbar';
+export type CategoryId = string;
 
-export const CATEGORY_LABELS: Record<CategoryId, string> = {
-  params: '參數設定',
-  function: '功能',
-  transaction: '交易串接',
-  settlement: '結帳更新',
-  boot: '開機',
-  external: '外接設備',
-  version: '升降版',
-  statusbar: 'Status / Navigation Bar',
-};
+export interface CategoryDef {
+  id: CategoryId;
+  label: string;
+}
+
+export const DEFAULT_CATEGORIES: CategoryDef[] = [
+  { id: 'params', label: '參數設定' },
+  { id: 'function', label: '功能' },
+  { id: 'transaction', label: '交易串接' },
+  { id: 'settlement', label: '結帳更新' },
+  { id: 'boot', label: '開機' },
+  { id: 'external', label: '外接設備' },
+  { id: 'version', label: '升降版' },
+  { id: 'statusbar', label: 'Status / Navigation Bar' },
+];
 
 export interface TestCase {
   id: string;
@@ -69,4 +66,5 @@ export interface AppState {
   rounds: TestRound[];
   activeRoundId: string | null;
   models: ModelDef[];
+  categories: CategoryDef[];
 }

@@ -1,6 +1,6 @@
-import type { AppState, TestCase, TestRound, TestResult, ModelId, TestStatus } from './types';
+import type { AppState, TestCase, TestRound, TestResult, ModelId, TestStatus, CategoryId } from './types';
 import { DEFAULT_CASES } from './masterData';
-import { DEFAULT_MODELS } from './types';
+import { DEFAULT_MODELS, DEFAULT_CATEGORIES } from './types';
 
 const STORAGE_KEY = 'launcher-test-manager';
 
@@ -11,11 +11,12 @@ function loadState(): AppState {
       const parsed = JSON.parse(raw) as AppState;
       if (parsed.masterCases && parsed.rounds) {
         if (!parsed.models) parsed.models = DEFAULT_MODELS;
+        if (!parsed.categories) parsed.categories = DEFAULT_CATEGORIES;
         return parsed;
       }
     }
   } catch { /* ignore */ }
-  return { masterCases: DEFAULT_CASES, rounds: [], activeRoundId: null, models: DEFAULT_MODELS };
+  return { masterCases: DEFAULT_CASES, rounds: [], activeRoundId: null, models: DEFAULT_MODELS, categories: DEFAULT_CATEGORIES };
 }
 
 function saveState(state: AppState) {
@@ -74,6 +75,42 @@ export function deleteModel(modelId: string) {
       ...c,
       models: c.models.filter(m => m !== modelId),
     })),
+  };
+  notify();
+}
+
+// ── Category management ──
+
+export function getCategoryLabel(catId: CategoryId): string {
+  const c = _state.categories.find(c => c.id === catId);
+  return c ? c.label : catId;
+}
+
+export function getAllCategoryIds(): CategoryId[] {
+  return _state.categories.map(c => c.id);
+}
+
+export function addCategory(id: string, label: string) {
+  const normalized = id.replace(/\s+/g, '_');
+  if (_state.categories.some(c => c.id === normalized)) return false;
+  _state = { ..._state, categories: [..._state.categories, { id: normalized, label }] };
+  notify();
+  return true;
+}
+
+export function updateCategory(catId: string, label: string) {
+  _state = {
+    ..._state,
+    categories: _state.categories.map(c => c.id === catId ? { ...c, label } : c),
+  };
+  notify();
+}
+
+export function deleteCategory(catId: string) {
+  _state = {
+    ..._state,
+    categories: _state.categories.filter(c => c.id !== catId),
+    masterCases: _state.masterCases.filter(c => c.category !== catId),
   };
   notify();
 }
@@ -178,6 +215,7 @@ export function importData(json: string) {
     const data = JSON.parse(json) as AppState;
     if (data.masterCases && data.rounds) {
       if (!data.models) data.models = DEFAULT_MODELS;
+      if (!data.categories) data.categories = DEFAULT_CATEGORIES;
       _state = data;
       notify();
       return true;

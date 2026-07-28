@@ -1,6 +1,6 @@
 import { useStore } from '../hooks/useStore';
-import { CATEGORY_LABELS, type CategoryId } from '../types';
-import { getCasesForModel, getResultKey, getModelLabel } from '../store';
+import type { CategoryId } from '../types';
+import { getCasesForModel, getResultKey, getModelLabel, getCategoryLabel } from '../store';
 import { BarChart3, CheckCircle2, XCircle, Clock } from 'lucide-react';
 
 export function Dashboard() {
@@ -129,7 +129,7 @@ export function Dashboard() {
             const pct = d.total > 0 ? Math.round((d.pass / d.total) * 100) : 0;
             return (
               <div key={cat} className="flex items-center gap-3 text-sm">
-                <span className="w-44 text-fg-muted truncate">{CATEGORY_LABELS[cat]}</span>
+                <span className="w-44 text-fg-muted truncate">{getCategoryLabel(cat)}</span>
                 <div className="flex-1 h-1.5 bg-surface-3 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-primary rounded-full transition-all"
