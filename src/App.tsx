@@ -1,7 +1,8 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { ThemeToggle } from './components/ThemeToggle';
 import { Dashboard } from './components/Dashboard';
 import { Checklist } from './components/Checklist';
+import type { ChecklistNav } from './components/Checklist';
 import { CaseManager } from './components/CaseManager';
 import { RoundList } from './components/RoundList';
 import { CreateRound } from './components/CreateRound';
@@ -23,6 +24,12 @@ export default function App() {
   const [tab, setTab] = useState<Tab>('dashboard');
   const [showCreate, setShowCreate] = useState(false);
   const [showModels, setShowModels] = useState(false);
+  const [checklistNav, setChecklistNav] = useState<ChecklistNav | null>(null);
+
+  const navigateToChecklist = useCallback((nav: ChecklistNav) => {
+    setChecklistNav(nav);
+    setTab('checklist');
+  }, []);
   const fileRef = useRef<HTMLInputElement>(null);
   const { activeRoundId, rounds } = useStore();
   const activeRound = rounds.find(r => r.id === activeRoundId);
@@ -114,8 +121,8 @@ export default function App() {
 
       {/* Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
-        {tab === 'dashboard' && <Dashboard />}
-        {tab === 'checklist' && <Checklist />}
+        {tab === 'dashboard' && <Dashboard onNavigate={navigateToChecklist} />}
+        {tab === 'checklist' && <Checklist nav={checklistNav} onNavConsumed={() => setChecklistNav(null)} />}
         {tab === 'cases' && <CaseManager />}
         {tab === 'rounds' && <RoundList />}
       </main>

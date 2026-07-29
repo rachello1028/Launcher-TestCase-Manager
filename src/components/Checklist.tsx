@@ -1,9 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useStore } from '../hooks/useStore';
 import type { ModelId, CategoryId, TestStatus } from '../types';
 import { getCasesForModel, getResultKey, updateResult, getModelLabel, getCategoryLabel } from '../store';
 import { createJiraIssue } from '../jira';
-import { CheckCircle2, XCircle, SkipForward, Clock, ExternalLink, MessageSquare, ChevronDown, ChevronRight, Loader2 } from 'lucide-react';
+import { CheckCircle2, XCircle, SkipForward, Clock, ExternalLink, MessageSquare, ChevronDown, ChevronRight, Loader2, Filter } from 'lucide-react';
+
+export interface ChecklistNav {
+  modelId: ModelId;
+  status?: TestStatus;
+}
 
 const STATUS_CONFIG: Record<TestStatus, { icon: typeof CheckCircle2; label: string; className: string }> = {
   pass: { icon: CheckCircle2, label: 'Pass', className: 'text-emerald-ink' },
@@ -12,14 +17,41 @@ const STATUS_CONFIG: Record<TestStatus, { icon: typeof CheckCircle2; label: stri
   pending: { icon: Clock, label: '待測', className: 'text-fg-subtle' },
 };
 
-export function Checklist() {
+const STATUS_FILTERS: { id: TestStatus | 'all'; label: string }[] = [
+  { id: 'all', label: '全部' },
+  { id: 'fail', label: '失敗' },
+  { id: 'pending', label: '待測' },
+  { id: 'pass', label: '通過' },
+  { id: 'skip', label: '略過' },
+];
+
+interface ChecklistProps {
+  nav?: ChecklistNav | null;
+  onNavConsumed?: () => void;
+}
+
+export function Checklist({ nav, onNavConsumed }: ChecklistProps) {
   const { rounds, activeRoundId } = useStore();
   const round = rounds.find(r => r.id === activeRoundId);
   const [activeModel, setActiveModel] = useState<ModelId | null>(null);
+  const [statusFilter, setStatusFilter] = useState<TestStatus | 'all'>('all');
   const [collapsedCats, setCollapsedCats] = useState<Set<string>>(new Set());
   const [editingNote, setEditingNote] = useState<string | null>(null);
   const [noteText, setNoteText] = useState('');
   const [creatingJira, setCreatingJira] = useState<string | null>(null);
+  const firstMatchRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (nav && round) {
+      setActiveModel(nav.modelId);
+      setStatusFilter(nav.status || 'all');
+      setCollapsedCats(new Set());
+      onNavConsumed?.();
+      setTimeout(() => {
+        firstMatchRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 100);
+    }
+  }, [nav]);
 
   if (!round) {
     return (
@@ -96,6 +128,8 @@ export function Checklist() {
     return { modelId: m, total: mCases.length, done };
   });
 
+  let firstMatchMarked = false;
+
   return (
     <div className="space-y-4">
       {/* Model tabs */}
@@ -120,6 +154,32 @@ export function Checklist() {
         })}
       </div>
 
+      {/* Status filter */}
+      <div className="flex items-center gap-2">
+        <Filter size={14} className="text-fg-subtle" />
+        {STATUS_FILTERS.map(f => (
+          <button
+            key={f.id}
+            onClick={() => setStatusFilter(f.id)}
+            className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-colors
+              ${statusFilter === f.id
+                ? 'bg-blue-soft text-blue-ink border-blue-line'
+                : 'bg-surface text-fg-muted border-border hover:bg-surface-3'
+              }`}
+          >
+            {f.label}
+          </button>
+        ))}
+        {statusFilter !== 'all' && (
+          <button
+            onClick={() => setStatusFilter('all')}
+            className="text-xs text-fg-subtle hover:text-fg underline ml-1"
+          >
+            清除篩選
+          </button>
+        )}
+      </div>
+
       {/* Cases by category */}
       {(Object.keys(grouped) as CategoryId[]).map(cat => {
         const catCases = grouped[cat];
@@ -128,6 +188,14 @@ export function Checklist() {
           const r = round.results[getResultKey(c.id, currentModel)];
           return r && r.status !== 'pending';
         }).length;
+
+        const visibleCount = statusFilter === 'all'
+          ? catCases.length
+          : catCases.filter(c => {
+              const r = round.results[getResultKey(c.id, currentModel)];
+              return (r?.status || 'pending') === statusFilter;
+            }).length;
+        if (visibleCount === 0) return null;
 
         return (
           <div key={cat} className="bg-surface rounded-lg border border-border overflow-hidden">
@@ -148,12 +216,15 @@ export function Checklist() {
                   const key = getResultKey(c.id, currentModel);
                   const result = round.results[key];
                   const status: TestStatus = result?.status || 'pending';
+                  if (statusFilter !== 'all' && status !== statusFilter) return null;
                   const config = STATUS_CONFIG[status];
                   const Icon = config.icon;
                   const isEditing = editingNote === key;
+                  const isFirstMatch = !firstMatchMarked && statusFilter !== 'all';
+                  if (isFirstMatch) firstMatchMarked = true;
 
                   return (
-                    <div key={c.id} className="px-4 py-2.5 flex items-start gap-3 group">
+                    <div key={c.id} ref={isFirstMatch ? firstMatchRef : undefined} className="px-4 py-2.5 flex items-start gap-3 group">
                       <button
                         onClick={() => cycleStatus(c.id)}
                         className={`mt-0.5 flex-shrink-0 transition-colors ${config.className} hover:opacity-70`}

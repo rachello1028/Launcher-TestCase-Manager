@@ -1,9 +1,14 @@
 import { useStore } from '../hooks/useStore';
 import type { CategoryId } from '../types';
 import { getCasesForModel, getResultKey, getModelLabel, getCategoryLabel } from '../store';
+import type { ChecklistNav } from './Checklist';
 import { BarChart3, CheckCircle2, XCircle, Clock } from 'lucide-react';
 
-export function Dashboard() {
+interface DashboardProps {
+  onNavigate: (nav: ChecklistNav) => void;
+}
+
+export function Dashboard({ onNavigate }: DashboardProps) {
   const { rounds, activeRoundId } = useStore();
   const round = rounds.find(r => r.id === activeRoundId);
 
@@ -66,7 +71,16 @@ export function Dashboard() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-5">
           <StatCard icon={<BarChart3 size={18} />} label="總案例數" value={grandTotal} color="blue" />
           <StatCard icon={<CheckCircle2 size={18} />} label="通過" value={grandPass} color="emerald" />
-          <StatCard icon={<XCircle size={18} />} label="失敗" value={grandFail} color="red" />
+          <StatCard
+            icon={<XCircle size={18} />}
+            label="失敗"
+            value={grandFail}
+            color="red"
+            onClick={grandFail > 0 ? () => {
+              const firstFail = modelStats.find(m => m.fail > 0);
+              if (firstFail) onNavigate({ modelId: firstFail.modelId, status: 'fail' });
+            } : undefined}
+          />
           <StatCard icon={<Clock size={18} />} label="待測" value={grandTotal - grandDone} color="amber" />
         </div>
 
@@ -101,7 +115,16 @@ export function Dashboard() {
                 <span className="text-emerald-ink">通過</span>
                 <span className="font-mono text-right text-emerald-ink">{m.pass}</span>
                 <span className="text-red-ink">失敗</span>
-                <span className="font-mono text-right text-red-ink">{m.fail}</span>
+                {m.fail > 0 ? (
+                  <button
+                    onClick={() => onNavigate({ modelId: m.modelId, status: 'fail' })}
+                    className="font-mono text-right text-red-ink underline decoration-dotted hover:decoration-solid cursor-pointer"
+                  >
+                    {m.fail}
+                  </button>
+                ) : (
+                  <span className="font-mono text-right text-red-ink">{m.fail}</span>
+                )}
                 <span className="text-fg-muted">待測</span>
                 <span className="font-mono text-right text-fg-muted">{m.pending}</span>
               </div>
@@ -146,9 +169,10 @@ export function Dashboard() {
   );
 }
 
-function StatCard({ icon, label, value, color }: { icon: React.ReactNode; label: string; value: number; color: string }) {
+function StatCard({ icon, label, value, color, onClick }: { icon: React.ReactNode; label: string; value: number; color: string; onClick?: () => void }) {
+  const cls = `bg-${color}-soft border border-${color}-line rounded-lg p-3 flex items-center gap-3${onClick ? ' cursor-pointer hover:brightness-95 transition-all' : ''}`;
   return (
-    <div className={`bg-${color}-soft border border-${color}-line rounded-lg p-3 flex items-center gap-3`}>
+    <div className={cls} onClick={onClick} role={onClick ? 'button' : undefined}>
       <div className={`text-${color}-ink`}>{icon}</div>
       <div>
         <p className={`text-2xl font-semibold font-mono text-${color}-ink`}>{value}</p>
