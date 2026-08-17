@@ -135,7 +135,7 @@ export function Checklist({ nav, onNavConsumed }: ChecklistProps) {
   return (
     <div className="space-y-4">
       {/* Sticky toolbar: model tabs + status filter */}
-      <div className="sticky top-14 z-30 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 bg-canvas border-b border-border space-y-2">
+      <div className="sticky top-[96px] z-30 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 bg-canvas border-b border-border space-y-2">
         {/* Model tabs */}
         <div className="flex gap-2 overflow-x-auto">
           {modelCounts.map(({ modelId, total, done }) => {

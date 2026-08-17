@@ -96,7 +96,7 @@ export default function App() {
           </div>
 
           {/* Tab bar */}
-          <div className="flex gap-1 -mb-px">
+          <div className="flex gap-1 -mb-px h-10">
             {TABS.map(t => {
               const Icon = t.icon;
               const active = tab === t.id;
