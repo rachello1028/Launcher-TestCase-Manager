@@ -3,7 +3,7 @@ import { useStore } from '../hooks/useStore';
 import type { ModelId, CategoryId, TestStatus } from '../types';
 import { getCasesForModel, getResultKey, updateResult, getModelLabel, getCategoryLabel } from '../store';
 import { createJiraIssue } from '../jira';
-import { CheckCircle2, XCircle, SkipForward, Clock, ExternalLink, MessageSquare, ChevronDown, ChevronRight, Loader2, Filter } from 'lucide-react';
+import { CheckCircle2, XCircle, SkipForward, Clock, ExternalLink, MessageSquare, ChevronDown, ChevronRight, Loader2, Filter, BadgeCheck } from 'lucide-react';
 
 export interface ChecklistNav {
   modelId: ModelId;
@@ -13,6 +13,7 @@ export interface ChecklistNav {
 const STATUS_CONFIG: Record<TestStatus, { icon: typeof CheckCircle2; label: string; className: string }> = {
   pass: { icon: CheckCircle2, label: 'Pass', className: 'text-emerald-ink' },
   fail: { icon: XCircle, label: 'Fail', className: 'text-red-ink' },
+  fixed: { icon: BadgeCheck, label: 'Fixed', className: 'text-sky-ink' },
   skip: { icon: SkipForward, label: 'Skip', className: 'text-amber-ink' },
   pending: { icon: Clock, label: '待測', className: 'text-fg-subtle' },
 };
@@ -20,6 +21,7 @@ const STATUS_CONFIG: Record<TestStatus, { icon: typeof CheckCircle2; label: stri
 const STATUS_FILTERS: { id: TestStatus | 'all'; label: string }[] = [
   { id: 'all', label: '全部' },
   { id: 'fail', label: '失敗' },
+  { id: 'fixed', label: '已修復' },
   { id: 'pending', label: '待測' },
   { id: 'pass', label: '通過' },
   { id: 'skip', label: '略過' },
@@ -79,9 +81,9 @@ export function Checklist({ nav, onNavConsumed }: ChecklistProps) {
   const cycleStatus = (caseId: string) => {
     const key = getResultKey(caseId, currentModel);
     const current = round.results[key]?.status || 'pending';
-    const order: TestStatus[] = ['pending', 'pass', 'fail', 'skip'];
+    const order: TestStatus[] = ['pending', 'pass', 'fail', 'fixed', 'skip'];
     const next = order[(order.indexOf(current) + 1) % order.length];
-    updateResult(round.id, caseId, currentModel, next, round.results[key]?.notes || '');
+    updateResult(round.id, caseId, currentModel, next, round.results[key]?.notes || '', round.results[key]?.jiraKey);
   };
 
   const handleCreateJira = async (caseId: string, caseName: string, category: CategoryId) => {
@@ -237,7 +239,7 @@ export function Checklist({ nav, onNavConsumed }: ChecklistProps) {
                       </button>
 
                       <div className="flex-1 min-w-0">
-                        <span className={`text-sm ${status === 'pass' ? 'text-fg-muted line-through' : 'text-fg'}`}>
+                        <span className={`text-sm ${status === 'pass' || status === 'fixed' ? 'text-fg-muted line-through' : 'text-fg'}`}>
                           {c.name}
                         </span>
                         {result?.notes && !isEditing && (
@@ -296,7 +298,9 @@ export function Checklist({ nav, onNavConsumed }: ChecklistProps) {
                             href={`https://cybersoft4u.atlassian.net/browse/${result.jiraKey}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="px-1.5 py-0.5 rounded text-xs font-mono bg-red-soft text-red-ink hover:underline"
+                            className={`px-1.5 py-0.5 rounded text-xs font-mono hover:underline ${
+                              status === 'fixed' ? 'bg-sky-soft text-sky-ink' : 'bg-red-soft text-red-ink'
+                            }`}
                             title={`開啟 ${result.jiraKey}`}
                           >
                             {result.jiraKey}

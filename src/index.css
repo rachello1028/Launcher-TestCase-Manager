@@ -24,6 +24,7 @@
   --color-emerald-ink: #047857; --color-emerald-soft: #ecfdf5; --color-emerald-line: #a7f3d0;
   --color-red-ink: #b91c1c;    --color-red-soft: #fef2f2;    --color-red-line: #fecaca;
   --color-amber-ink: #b45309;  --color-amber-soft: #fffbeb;  --color-amber-line: #fde68a;
+  --color-sky-ink: #0369a1;    --color-sky-soft: #f0f9ff;    --color-sky-line: #bae6fd;
   --color-pink-ink: #be185d;   --color-pink-soft: #fdf2f8;   --color-pink-line: #fbcfe8;
   --color-indigo-ink: #4338ca; --color-indigo-soft: #eef2ff; --color-indigo-line: #c7d2fe;
 }
@@ -46,6 +47,7 @@
   --color-emerald-ink: #6ee7b7; --color-emerald-soft: rgba(6,78,59,.4);  --color-emerald-line: rgba(6,95,70,.5);
   --color-red-ink: #fca5a5;    --color-red-soft: rgba(127,29,29,.4);    --color-red-line: rgba(153,27,27,.5);
   --color-amber-ink: #fcd34d;  --color-amber-soft: rgba(120,53,15,.35); --color-amber-line: rgba(146,64,14,.5);
+  --color-sky-ink: #7dd3fc;    --color-sky-soft: rgba(12,74,110,.35);   --color-sky-line: rgba(3,105,161,.5);
   --color-pink-ink: #f9a8d4;   --color-pink-soft: rgba(80,7,36,.4);     --color-pink-line: rgba(157,23,77,.5);
   --color-indigo-ink: #a5b4fc; --color-indigo-soft: rgba(49,46,129,.4); --color-indigo-line: rgba(55,48,163,.5);
 }

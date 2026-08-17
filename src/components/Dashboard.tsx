@@ -2,7 +2,7 @@ import { useStore } from '../hooks/useStore';
 import type { CategoryId } from '../types';
 import { getCasesForModel, getResultKey, getModelLabel, getCategoryLabel } from '../store';
 import type { ChecklistNav } from './Checklist';
-import { BarChart3, CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { BarChart3, CheckCircle2, XCircle, Clock, BadgeCheck } from 'lucide-react';
 
 interface DashboardProps {
   onNavigate: (nav: ChecklistNav) => void;
@@ -25,23 +25,25 @@ export function Dashboard({ onNavigate }: DashboardProps) {
   const modelStats = round.models.map(modelId => {
     const cases = getCasesForModel(modelId);
     const total = cases.length;
-    let pass = 0, fail = 0, skip = 0, pending = 0;
+    let pass = 0, fail = 0, fixed = 0, skip = 0, pending = 0;
     cases.forEach(c => {
       const key = getResultKey(c.id, modelId);
       const r = round.results[key];
       if (!r || r.status === 'pending') pending++;
       else if (r.status === 'pass') pass++;
       else if (r.status === 'fail') fail++;
+      else if (r.status === 'fixed') fixed++;
       else if (r.status === 'skip') skip++;
     });
-    return { modelId, total, pass, fail, skip, pending };
+    return { modelId, total, pass, fail, fixed, skip, pending };
   });
 
   const grandTotal = modelStats.reduce((s, m) => s + m.total, 0);
   const grandPass = modelStats.reduce((s, m) => s + m.pass, 0);
   const grandFail = modelStats.reduce((s, m) => s + m.fail, 0);
+  const grandFixed = modelStats.reduce((s, m) => s + m.fixed, 0);
   const grandSkip = modelStats.reduce((s, m) => s + m.skip, 0);
-  const grandDone = grandPass + grandFail + grandSkip;
+  const grandDone = grandPass + grandFail + grandFixed + grandSkip;
   const overallPct = grandTotal > 0 ? Math.round((grandDone / grandTotal) * 100) : 0;
 
   const categoryBreakdown: Record<CategoryId, { total: number; pass: number; fail: number }> = {} as any;
@@ -52,7 +54,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
       categoryBreakdown[c.category].total++;
       const key = getResultKey(c.id, modelId);
       const r = round.results[key];
-      if (r?.status === 'pass') categoryBreakdown[c.category].pass++;
+      if (r?.status === 'pass' || r?.status === 'fixed') categoryBreakdown[c.category].pass++;
       else if (r?.status === 'fail') categoryBreakdown[c.category].fail++;
     });
   });
@@ -68,7 +70,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
           </span>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-5">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-5">
           <StatCard icon={<BarChart3 size={18} />} label="總案例數" value={grandTotal} color="blue" />
           <StatCard icon={<CheckCircle2 size={18} />} label="通過" value={grandPass} color="emerald" />
           <StatCard
@@ -81,6 +83,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
               if (firstFail) onNavigate({ modelId: firstFail.modelId, status: 'fail' });
             } : undefined}
           />
+          <StatCard icon={<BadgeCheck size={18} />} label="已修復" value={grandFixed} color="sky" />
           <StatCard icon={<Clock size={18} />} label="待測" value={grandTotal - grandDone} color="amber" />
         </div>
 
@@ -104,7 +107,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
       {/* Per Model */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {modelStats.map(m => {
-          const donePct = m.total > 0 ? Math.round(((m.pass + m.fail + m.skip) / m.total) * 100) : 0;
+          const donePct = m.total > 0 ? Math.round(((m.pass + m.fail + m.fixed + m.skip) / m.total) * 100) : 0;
           const borderColor = m.fail > 0 ? 'border-l-red-500' : donePct === 100 ? 'border-l-emerald-500' : 'border-l-blue-500';
           return (
             <div key={m.modelId} className={`bg-surface rounded-lg border border-border border-l-4 ${borderColor} p-4`}>
@@ -125,6 +128,8 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                 ) : (
                   <span className="font-mono text-right text-red-ink">{m.fail}</span>
                 )}
+                <span className="text-sky-ink">已修復</span>
+                <span className="font-mono text-right text-sky-ink">{m.fixed}</span>
                 <span className="text-fg-muted">待測</span>
                 <span className="font-mono text-right text-fg-muted">{m.pending}</span>
               </div>

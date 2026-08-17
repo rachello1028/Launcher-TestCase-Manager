@@ -42,7 +42,7 @@ export interface TestCase {
   models: ModelId[];
 }
 
-export type TestStatus = 'pass' | 'fail' | 'skip' | 'pending';
+export type TestStatus = 'pass' | 'fail' | 'fixed' | 'skip' | 'pending';
 
 export interface TestResult {
   caseId: string;
