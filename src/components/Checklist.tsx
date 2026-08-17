@@ -132,31 +132,33 @@ export function Checklist({ nav, onNavConsumed }: ChecklistProps) {
 
   return (
     <div className="space-y-4">
-      {/* Model tabs */}
-      <div className="flex gap-2 overflow-x-auto pb-1">
-        {modelCounts.map(({ modelId, total, done }) => {
-          const active = modelId === currentModel;
-          const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-          return (
-            <button
-              key={modelId}
-              onClick={() => setActiveModel(modelId)}
-              className={`flex-shrink-0 px-4 py-2 rounded-md text-sm font-medium border transition-colors
-                ${active
-                  ? 'bg-blue-soft text-blue-ink border-blue-line'
-                  : 'bg-surface text-fg-muted border-border hover:bg-surface-3 hover:text-fg'
-                }`}
-            >
-              <span>{getModelLabel(modelId)}</span>
-              <span className="ml-2 text-xs font-mono opacity-70">{pct}%</span>
-            </button>
-          );
-        })}
-      </div>
+      {/* Sticky toolbar: model tabs + status filter */}
+      <div className="sticky top-14 z-30 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 bg-canvas border-b border-border space-y-2">
+        {/* Model tabs */}
+        <div className="flex gap-2 overflow-x-auto">
+          {modelCounts.map(({ modelId, total, done }) => {
+            const active = modelId === currentModel;
+            const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+            return (
+              <button
+                key={modelId}
+                onClick={() => setActiveModel(modelId)}
+                className={`flex-shrink-0 px-4 py-2 rounded-md text-sm font-medium border transition-colors
+                  ${active
+                    ? 'bg-blue-soft text-blue-ink border-blue-line'
+                    : 'bg-surface text-fg-muted border-border hover:bg-surface-3 hover:text-fg'
+                  }`}
+              >
+                <span>{getModelLabel(modelId)}</span>
+                <span className="ml-2 text-xs font-mono opacity-70">{pct}%</span>
+              </button>
+            );
+          })}
+        </div>
 
-      {/* Status filter */}
-      <div className="flex items-center gap-2">
-        <Filter size={14} className="text-fg-subtle" />
+        {/* Status filter */}
+        <div className="flex items-center gap-2">
+          <Filter size={14} className="text-fg-subtle" />
         {STATUS_FILTERS.map(f => (
           <button
             key={f.id}
@@ -178,6 +180,7 @@ export function Checklist({ nav, onNavConsumed }: ChecklistProps) {
             清除篩選
           </button>
         )}
+        </div>
       </div>
 
       {/* Cases by category */}
