@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useStore } from '../hooks/useStore';
 import type { ModelId, CategoryId, TestStatus } from '../types';
-import { getCasesForModel, getResultKey, updateResult, getModelLabel, getCategoryLabel } from '../store';
+import { getCasesForModel, getResultKey, updateResult, getModelLabel, getCategoryLabel, skipOtherModels } from '../store';
 import { createJiraIssue } from '../jira';
 import { CheckCircle2, XCircle, SkipForward, Clock, ExternalLink, MessageSquare, ChevronDown, ChevronRight, Loader2, Filter, BadgeCheck } from 'lucide-react';
 
@@ -283,6 +283,23 @@ export function Checklist({ nav, onNavConsumed }: ChecklistProps) {
                         >
                           <MessageSquare size={14} />
                         </button>
+                        {(status === 'pass' || status === 'fixed') && (() => {
+                          const otherPending = c.models.filter(m =>
+                            m !== currentModel && round.models.includes(m) &&
+                            (!round.results[getResultKey(c.id, m)] || round.results[getResultKey(c.id, m)]?.status === 'pending')
+                          ).length;
+                          return otherPending > 0 ? (
+                            <button
+                              onClick={() => {
+                                skipOtherModels(round.id, c.id, currentModel);
+                              }}
+                              className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-soft text-amber-ink hover:brightness-95"
+                              title={`將其他 ${otherPending} 台待測機種標為略過`}
+                            >
+                              略過其他 {otherPending} 台
+                            </button>
+                          ) : null;
+                        })()}
                         {status === 'fail' && !result?.jiraKey && (
                           <button
                             onClick={() => handleCreateJira(c.id, c.name, c.category)}

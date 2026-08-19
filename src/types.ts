@@ -40,6 +40,7 @@ export interface TestCase {
   name: string;
   parentId?: string;
   models: ModelId[];
+  requiredModels?: number;
 }
 
 export type TestStatus = 'pass' | 'fail' | 'fixed' | 'skip' | 'pending';

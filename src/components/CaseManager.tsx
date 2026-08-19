@@ -100,6 +100,11 @@ export function CaseManager() {
                     </div>
                   </div>
                   <div className="flex gap-1 flex-wrap mt-1.5">
+                    {c.requiredModels && c.requiredModels > 0 && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-sky-soft text-sky-ink font-medium">
+                        任意 {c.requiredModels} 台
+                      </span>
+                    )}
                     {c.models.map(m => (
                       <span key={m} className="text-[10px] px-1.5 py-0.5 rounded bg-surface-3 text-fg-subtle font-medium">
                         {getModelLabel(m)}
@@ -232,7 +237,7 @@ function CategoryManager({ onClose }: { onClose: () => void }) {
 }
 
 function CaseForm({ initial, onSave, onCancel }: {
-  initial?: { id: string; name: string; category: CategoryId; models: ModelId[] };
+  initial?: { id: string; name: string; category: CategoryId; models: ModelId[]; requiredModels?: number };
   onSave: () => void;
   onCancel: () => void;
 }) {
@@ -242,6 +247,7 @@ function CaseForm({ initial, onSave, onCancel }: {
   const [name, setName] = useState(initial?.name || '');
   const [category, setCategory] = useState<CategoryId>(initial?.category || allCatIds[0] || '');
   const [models, setModels] = useState<Set<ModelId>>(new Set(initial?.models || allIds));
+  const [requiredModels, setRequiredModels] = useState(initial?.requiredModels || 0);
 
   const toggleModel = (m: ModelId) => {
     const next = new Set(models);
@@ -252,10 +258,11 @@ function CaseForm({ initial, onSave, onCancel }: {
 
   const handleSave = () => {
     if (!name.trim() || models.size === 0 || !category) return;
+    const req = requiredModels > 0 && requiredModels < models.size ? requiredModels : undefined;
     if (initial) {
-      updateCase(initial.id, { name: name.trim(), category, models: Array.from(models) });
+      updateCase(initial.id, { name: name.trim(), category, models: Array.from(models), requiredModels: req });
     } else {
-      addCase({ id: `tc_${Date.now()}`, name: name.trim(), category, models: Array.from(models) });
+      addCase({ id: `tc_${Date.now()}`, name: name.trim(), category, models: Array.from(models), requiredModels: req });
     }
     onSave();
   };
@@ -296,6 +303,23 @@ function CaseForm({ initial, onSave, onCancel }: {
             {getModelLabel(m)}
           </label>
         ))}
+      </div>
+
+      <div className="flex items-center gap-2">
+        <label className="text-xs text-fg-muted">驗證策略：</label>
+        <select
+          value={requiredModels}
+          onChange={e => setRequiredModels(Number(e.target.value))}
+          className="px-2 py-1 rounded-md border border-border-strong text-xs"
+        >
+          <option value={0}>全部機種</option>
+          {Array.from({ length: Math.max(models.size - 1, 0) }, (_, i) => i + 1).map(n => (
+            <option key={n} value={n}>任意 {n} 台即可</option>
+          ))}
+        </select>
+        {requiredModels > 0 && (
+          <span className="text-[10px] text-fg-subtle">達門檻後，其他 pending 機種自動略過</span>
+        )}
       </div>
 
       <div className="flex justify-end gap-2">

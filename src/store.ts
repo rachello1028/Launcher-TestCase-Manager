@@ -149,10 +149,37 @@ export function deleteRound(roundId: string) {
 export function updateResult(roundId: string, caseId: string, modelId: ModelId, status: TestStatus, notes: string, jiraKey?: string) {
   const key = `${caseId}__${modelId}`;
   const result: TestResult = { caseId, modelId, status, notes, jiraKey, updatedAt: new Date().toISOString() };
+  const round = _state.rounds.find(r => r.id === roundId);
+  if (!round) return;
+
+  const updatedResults = { ...round.results, [key]: result };
+
+  if (status === 'pass' || status === 'fixed') {
+    const tc = _state.masterCases.find(c => c.id === caseId);
+    if (tc?.requiredModels && tc.requiredModels > 0) {
+      const modelsInRound = tc.models.filter(m => round.models.includes(m));
+      const doneCount = modelsInRound.filter(m => {
+        const s = (m === modelId) ? status : updatedResults[`${caseId}__${m}`]?.status;
+        return s === 'pass' || s === 'fixed';
+      }).length;
+
+      if (doneCount >= tc.requiredModels) {
+        const now = new Date().toISOString();
+        modelsInRound.forEach(m => {
+          const k = `${caseId}__${m}`;
+          const existing = updatedResults[k];
+          if (!existing || existing.status === 'pending') {
+            updatedResults[k] = { caseId, modelId: m, status: 'skip', notes: '已達驗證門檻，自動略過', updatedAt: now };
+          }
+        });
+      }
+    }
+  }
+
   _state = {
     ..._state,
     rounds: _state.rounds.map(r =>
-      r.id === roundId ? { ...r, results: { ...r.results, [key]: result } } : r
+      r.id === roundId ? { ...r, results: updatedResults } : r
     ),
   };
   notify();
@@ -160,6 +187,36 @@ export function updateResult(roundId: string, caseId: string, modelId: ModelId, 
 
 export function getResultKey(caseId: string, modelId: ModelId) {
   return `${caseId}__${modelId}`;
+}
+
+export function skipOtherModels(roundId: string, caseId: string, currentModelId: ModelId) {
+  const round = _state.rounds.find(r => r.id === roundId);
+  const tc = _state.masterCases.find(c => c.id === caseId);
+  if (!round || !tc) return 0;
+
+  const now = new Date().toISOString();
+  const updatedResults = { ...round.results };
+  let skipped = 0;
+
+  tc.models.filter(m => round.models.includes(m) && m !== currentModelId).forEach(m => {
+    const k = `${caseId}__${m}`;
+    const existing = updatedResults[k];
+    if (!existing || existing.status === 'pending') {
+      updatedResults[k] = { caseId, modelId: m, status: 'skip', notes: '手動略過（其他機種不需驗證）', updatedAt: now };
+      skipped++;
+    }
+  });
+
+  if (skipped > 0) {
+    _state = {
+      ..._state,
+      rounds: _state.rounds.map(r =>
+        r.id === roundId ? { ...r, results: updatedResults } : r
+      ),
+    };
+    notify();
+  }
+  return skipped;
 }
 
 // ── Case management ──
