@@ -122,12 +122,13 @@ export function Checklist({ nav, onNavConsumed }: ChecklistProps) {
 
   const modelCounts = round.models.map(m => {
     const mCases = getCasesForModel(m);
-    let done = 0;
+    let done = 0, skipped = 0;
     mCases.forEach(c => {
       const r = round.results[getResultKey(c.id, m)];
-      if (r && r.status !== 'pending') done++;
+      if (r?.status === 'skip') skipped++;
+      else if (r && r.status !== 'pending') done++;
     });
-    return { modelId: m, total: mCases.length, done };
+    return { modelId: m, total: mCases.length - skipped, done };
   });
 
   let firstMatchMarked = false;
@@ -189,9 +190,10 @@ export function Checklist({ nav, onNavConsumed }: ChecklistProps) {
       {(Object.keys(grouped) as CategoryId[]).map(cat => {
         const catCases = grouped[cat];
         const collapsed = collapsedCats.has(cat);
+        const catSkip = catCases.filter(c => round.results[getResultKey(c.id, currentModel)]?.status === 'skip').length;
         const catDone = catCases.filter(c => {
           const r = round.results[getResultKey(c.id, currentModel)];
-          return r && r.status !== 'pending';
+          return r && r.status !== 'pending' && r.status !== 'skip';
         }).length;
 
         const visibleCount = statusFilter === 'all'
@@ -212,7 +214,7 @@ export function Checklist({ nav, onNavConsumed }: ChecklistProps) {
                 {collapsed ? <ChevronRight size={16} className="text-fg-subtle" /> : <ChevronDown size={16} className="text-fg-subtle" />}
                 <h3 className="font-medium text-fg">{getCategoryLabel(cat)}</h3>
               </div>
-              <span className="text-xs font-mono text-fg-subtle">{catDone}/{catCases.length}</span>
+              <span className="text-xs font-mono text-fg-subtle">{catDone}/{catCases.length - catSkip}</span>
             </button>
 
             {!collapsed && (

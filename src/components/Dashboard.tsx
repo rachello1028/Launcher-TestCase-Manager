@@ -43,17 +43,19 @@ export function Dashboard({ onNavigate }: DashboardProps) {
   const grandFail = modelStats.reduce((s, m) => s + m.fail, 0);
   const grandFixed = modelStats.reduce((s, m) => s + m.fixed, 0);
   const grandSkip = modelStats.reduce((s, m) => s + m.skip, 0);
-  const grandDone = grandPass + grandFail + grandFixed + grandSkip;
-  const overallPct = grandTotal > 0 ? Math.round((grandDone / grandTotal) * 100) : 0;
+  const grandEffective = grandTotal - grandSkip;
+  const grandDone = grandPass + grandFail + grandFixed;
+  const overallPct = grandEffective > 0 ? Math.round((grandDone / grandEffective) * 100) : 0;
 
   const categoryBreakdown: Record<CategoryId, { total: number; pass: number; fail: number }> = {} as any;
   round.models.forEach(modelId => {
     const cases = getCasesForModel(modelId);
     cases.forEach(c => {
-      if (!categoryBreakdown[c.category]) categoryBreakdown[c.category] = { total: 0, pass: 0, fail: 0 };
-      categoryBreakdown[c.category].total++;
       const key = getResultKey(c.id, modelId);
       const r = round.results[key];
+      if (r?.status === 'skip') return;
+      if (!categoryBreakdown[c.category]) categoryBreakdown[c.category] = { total: 0, pass: 0, fail: 0 };
+      categoryBreakdown[c.category].total++;
       if (r?.status === 'pass' || r?.status === 'fixed') categoryBreakdown[c.category].pass++;
       else if (r?.status === 'fail') categoryBreakdown[c.category].fail++;
     });
@@ -71,7 +73,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-5">
-          <StatCard icon={<BarChart3 size={18} />} label="總案例數" value={grandTotal} color="blue" />
+          <StatCard icon={<BarChart3 size={18} />} label="需驗證" value={grandEffective} color="blue" />
           <StatCard icon={<CheckCircle2 size={18} />} label="通過" value={grandPass} color="emerald" />
           <StatCard
             icon={<XCircle size={18} />}
@@ -84,7 +86,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
             } : undefined}
           />
           <StatCard icon={<BadgeCheck size={18} />} label="已修復" value={grandFixed} color="sky" />
-          <StatCard icon={<Clock size={18} />} label="待測" value={grandTotal - grandDone} color="amber" />
+          <StatCard icon={<Clock size={18} />} label="待測" value={grandEffective - grandDone} color="amber" />
         </div>
 
         <div className="space-y-1.5">
@@ -107,14 +109,15 @@ export function Dashboard({ onNavigate }: DashboardProps) {
       {/* Per Model */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {modelStats.map(m => {
-          const donePct = m.total > 0 ? Math.round(((m.pass + m.fail + m.fixed + m.skip) / m.total) * 100) : 0;
+          const effective = m.total - m.skip;
+          const donePct = effective > 0 ? Math.round(((m.pass + m.fail + m.fixed) / effective) * 100) : 0;
           const borderColor = m.fail > 0 ? 'border-l-red-500' : donePct === 100 ? 'border-l-emerald-500' : 'border-l-blue-500';
           return (
             <div key={m.modelId} className={`bg-surface rounded-lg border border-border border-l-4 ${borderColor} p-4`}>
               <h3 className="font-medium text-fg mb-2">{getModelLabel(m.modelId)}</h3>
               <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm mb-3">
-                <span className="text-fg-muted">總數</span>
-                <span className="font-mono text-right text-fg">{m.total}</span>
+                <span className="text-fg-muted">需驗證</span>
+                <span className="font-mono text-right text-fg">{effective}</span>
                 <span className="text-emerald-ink">通過</span>
                 <span className="font-mono text-right text-emerald-ink">{m.pass}</span>
                 <span className="text-red-ink">失敗</span>
