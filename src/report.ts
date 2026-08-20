@@ -5,7 +5,8 @@ interface ReportCase {
   name: string;
   category: CategoryId;
   aggregateStatus: 'pass' | 'fail' | 'pending';
-  testedModels: string[];
+  verifiedModels: string[];
+  hasSkip: boolean;
   notes: string;
   jiraKey?: string;
 }
@@ -21,6 +22,8 @@ export function generateReport() {
   });
 
   const reportCases: ReportCase[] = [];
+  // 逐機種計數（與統計總覽同口徑，扣掉 skip）
+  let itemPass = 0, itemFixed = 0, itemFail = 0, itemPending = 0;
 
   allCaseIds.forEach(caseId => {
     const tc = state.masterCases.find(c => c.id === caseId);
@@ -30,18 +33,23 @@ export function generateReport() {
     let hasFail = false;
     let hasPending = false;
     let allSkip = true;
-    const testedModels: string[] = [];
+    let hasSkip = false;
+    const verifiedModels: string[] = [];
     let failNotes = '';
     let jiraKey = '';
 
     modelsInRound.forEach(m => {
       const r = round.results[getResultKey(caseId, m)];
       const s: TestStatus = r?.status || 'pending';
-      if (s === 'skip') return;
+      if (s === 'skip') { hasSkip = true; return; }
       allSkip = false;
-      if (s === 'pass' || s === 'fixed') {
+      if (s === 'pass') itemPass++;
+      else if (s === 'fixed') itemFixed++;
+      else if (s === 'fail') itemFail++;
+      else if (s === 'pending') itemPending++;
+      if (s === 'pass' || s === 'fixed' || s === 'fail') {
         const label = state.models.find(md => md.id === m)?.label || m;
-        testedModels.push(label);
+        verifiedModels.push(label);
       }
       if (s === 'fail') {
         hasFail = true;
@@ -59,7 +67,8 @@ export function generateReport() {
       name: tc.name,
       category: tc.category,
       aggregateStatus,
-      testedModels,
+      verifiedModels,
+      hasSkip,
       notes: hasFail ? failNotes : '',
       jiraKey: hasFail ? jiraKey : undefined,
     });
@@ -71,10 +80,8 @@ export function generateReport() {
     grouped[c.category].push(c);
   });
 
-  const totalCases = reportCases.length;
-  const passCount = reportCases.filter(c => c.aggregateStatus === 'pass').length;
-  const failCount = reportCases.filter(c => c.aggregateStatus === 'fail').length;
-  const pendingCount = reportCases.filter(c => c.aggregateStatus === 'pending').length;
+  // 摘要用逐機種口徑，與統計總覽一致
+  const effectiveTotal = itemPass + itemFixed + itemFail + itemPending;
   const today = new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' });
 
   let idx = 0;
@@ -87,17 +94,21 @@ export function generateReport() {
       const statusBg = c.aggregateStatus === 'fail' ? '#fef2f2' : 'transparent';
       const jiraLink = c.jiraKey ? `<a href="https://cybersoft4u.atlassian.net/browse/${c.jiraKey}" style="color:#1d4ed8;font-size:11px;">${c.jiraKey}</a>` : '';
       const noteHtml = c.notes ? `<div style="font-size:11px;color:#64748b;margin-top:2px;">${escapeHtml(c.notes)}</div>` : '';
+      const verifyText = c.hasSkip && c.verifiedModels.length > 0
+        ? escapeHtml(c.verifiedModels.join('、'))
+        : '<span style="color:#94a3b8;">n/a</span>';
 
       return `<tr style="background:${statusBg}">
         <td style="padding:6px 10px;border:1px solid #e2e8f0;text-align:center;color:#64748b;font-size:12px;">${idx}</td>
         <td style="padding:6px 10px;border:1px solid #e2e8f0;font-size:13px;">${escapeHtml(c.name)}${noteHtml}</td>
+        <td style="padding:6px 10px;border:1px solid #e2e8f0;font-size:12px;color:#475569;">${verifyText}</td>
         <td style="padding:6px 10px;border:1px solid #e2e8f0;text-align:center;font-weight:600;color:${statusColor};font-size:13px;">${statusText}</td>
         <td style="padding:6px 10px;border:1px solid #e2e8f0;font-size:11px;color:#64748b;">${jiraLink}</td>
       </tr>`;
     }).join('');
 
     return `<tr>
-      <td colspan="4" style="padding:8px 10px;border:1px solid #e2e8f0;background:#f1f5f9;font-weight:600;font-size:13px;color:#334155;">${escapeHtml(getCategoryLabel(cat))}</td>
+      <td colspan="5" style="padding:8px 10px;border:1px solid #e2e8f0;background:#f1f5f9;font-weight:600;font-size:13px;color:#334155;">${escapeHtml(getCategoryLabel(cat))}</td>
     </tr>${rows}`;
   }).join('');
 
@@ -116,7 +127,7 @@ export function generateReport() {
     tr { page-break-inside: avoid; }
   }
   table { border-collapse: collapse; width: 100%; }
-  .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 20px 0; }
+  .summary-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin: 20px 0; }
   .summary-card { border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px 16px; }
   .summary-card .label { font-size: 12px; color: #64748b; }
   .summary-card .value { font-size: 24px; font-weight: 700; font-family: monospace; }
@@ -133,20 +144,24 @@ export function generateReport() {
 
   <div class="summary-grid">
     <div class="summary-card">
-      <div class="label">測試案例</div>
-      <div class="value" style="color:#1d4ed8;">${totalCases}</div>
+      <div class="label">需驗證</div>
+      <div class="value" style="color:#1d4ed8;">${effectiveTotal}</div>
     </div>
     <div class="summary-card">
       <div class="label">通過</div>
-      <div class="value" style="color:#047857;">${passCount}</div>
+      <div class="value" style="color:#047857;">${itemPass}</div>
     </div>
-    <div class="summary-card" style="${failCount > 0 ? 'border-color:#fecaca;background:#fef2f2;' : ''}">
+    <div class="summary-card" style="${itemFail > 0 ? 'border-color:#fecaca;background:#fef2f2;' : ''}">
       <div class="label">失敗</div>
-      <div class="value" style="color:#b91c1c;">${failCount}</div>
+      <div class="value" style="color:#b91c1c;">${itemFail}</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">已修復</div>
+      <div class="value" style="color:#0369a1;">${itemFixed}</div>
     </div>
     <div class="summary-card">
       <div class="label">待測</div>
-      <div class="value" style="color:#92400e;">${pendingCount}</div>
+      <div class="value" style="color:#92400e;">${itemPending}</div>
     </div>
   </div>
 
@@ -155,6 +170,7 @@ export function generateReport() {
       <tr style="background:#f8fafc;">
         <th style="padding:8px 10px;border:1px solid #e2e8f0;text-align:center;font-size:12px;color:#64748b;width:40px;">#</th>
         <th style="padding:8px 10px;border:1px solid #e2e8f0;text-align:left;font-size:12px;color:#64748b;">測試案例</th>
+        <th style="padding:8px 10px;border:1px solid #e2e8f0;text-align:left;font-size:12px;color:#64748b;width:140px;">驗證機種</th>
         <th style="padding:8px 10px;border:1px solid #e2e8f0;text-align:center;font-size:12px;color:#64748b;width:70px;">結果</th>
         <th style="padding:8px 10px;border:1px solid #e2e8f0;text-align:left;font-size:12px;color:#64748b;width:100px;">Issue</th>
       </tr>
