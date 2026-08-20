@@ -8,8 +8,9 @@ import { RoundList } from './components/RoundList';
 import { CreateRound } from './components/CreateRound';
 import { ModelManager } from './components/ModelManager';
 import { exportAllData, importData } from './store';
+import { generateReport } from './report';
 import { useStore } from './hooks/useStore';
-import { LayoutDashboard, ClipboardList, Settings, Plus, Download, Upload, FolderOpen, Smartphone } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, Settings, Plus, Download, Upload, FolderOpen, Smartphone, FileText } from 'lucide-react';
 
 type Tab = 'dashboard' | 'checklist' | 'cases' | 'rounds';
 
@@ -74,6 +75,13 @@ export default function App() {
                 title="管理機型"
               >
                 <Smartphone size={16} />
+              </button>
+              <button
+                onClick={generateReport}
+                className="h-[34px] px-2.5 rounded-md text-fg-muted hover:bg-surface-3 hover:text-fg transition-colors flex items-center"
+                title="產生測試報告"
+              >
+                <FileText size={16} />
               </button>
               <button
                 onClick={exportAllData}
