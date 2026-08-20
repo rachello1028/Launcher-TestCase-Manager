@@ -170,10 +170,23 @@ export function generateReport() {
 </body>
 </html>`;
 
-  const win = window.open('', '_blank');
+  // 用 Blob URL 開新分頁（比 window.open('')+document.write 更不易被彈窗攔截）
+  const blob = new Blob([html], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  const win = window.open(url, '_blank');
   if (win) {
-    win.document.write(html);
-    win.document.close();
+    // 分頁載入後釋放，避免立即 revoke 導致空白
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  } else {
+    // 仍被攔截 → fallback 下載成 HTML 檔
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${round.version.replace(/\s+/g, '_') || 'report'}_${new Date().toISOString().slice(0, 10)}.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    alert('瀏覽器阻擋了新分頁，已改為下載報告 HTML 檔，開啟即可列印或存 PDF。');
   }
 }
 
