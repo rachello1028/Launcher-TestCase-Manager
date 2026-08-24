@@ -7,7 +7,7 @@ interface ReportCase {
   category: CategoryId;
   aggregateStatus: 'pass' | 'fail' | 'pending';
   verifiedModels: string[];
-  hasSkip: boolean;
+  showModels: boolean; // false = 通用（指派全機種且無 skip）→ 顯示 n/a
   notes: string;
   jiraKey?: string;
 }
@@ -75,13 +75,15 @@ function buildReportData(): ReportData | null {
     if (allSkip) return;
 
     const aggregateStatus = hasFail ? 'fail' : hasPending ? 'pending' : 'pass';
+    // 通用（n/a）= 指派給 round 全部機種 且 無 skip；只要「只指派部分機種」或「有 skip」就列出驗證機種
+    const isUniversal = modelsInRound.length === round.models.length && !hasSkip;
 
     reportCases.push({
       name: tc.name,
       category: tc.category,
       aggregateStatus,
       verifiedModels,
-      hasSkip,
+      showModels: !isUniversal,
       notes: hasFail ? failNotes : '',
       jiraKey: hasFail ? jiraKey : undefined,
     });
@@ -112,7 +114,7 @@ function statusText(s: ReportCase['aggregateStatus']): string {
 }
 
 function verifyModelsText(c: ReportCase): string {
-  return c.hasSkip && c.verifiedModels.length > 0 ? c.verifiedModels.join('、') : 'n/a';
+  return c.showModels && c.verifiedModels.length > 0 ? c.verifiedModels.join('、') : 'n/a';
 }
 
 // ── HTML 報告（列印 / 存 PDF）──
@@ -131,7 +133,7 @@ export function generateReport() {
       const bg = c.aggregateStatus === 'fail' ? '#fef2f2' : 'transparent';
       const jiraLink = c.jiraKey ? `<a href="https://cybersoft4u.atlassian.net/browse/${c.jiraKey}" style="color:#1d4ed8;font-size:11px;">${c.jiraKey}</a>` : '';
       const noteHtml = c.notes ? `<div style="font-size:11px;color:#64748b;margin-top:2px;">${escapeHtml(c.notes)}</div>` : '';
-      const verify = c.hasSkip && c.verifiedModels.length > 0
+      const verify = c.showModels && c.verifiedModels.length > 0
         ? escapeHtml(c.verifiedModels.join('、'))
         : '<span style="color:#94a3b8;">n/a</span>';
 
