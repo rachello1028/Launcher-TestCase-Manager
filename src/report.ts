@@ -6,8 +6,8 @@ interface ReportCase {
   name: string;
   category: CategoryId;
   aggregateStatus: 'pass' | 'fail' | 'pending';
-  verifiedModels: string[];
-  showModels: boolean; // false = 通用（指派全機種且無 skip）→ 顯示 n/a
+  verifiedModels: string[]; // 只含 pass / fixed 的機種
+  allModelsPass: boolean;   // round 全機種都 pass → 顯示 All
   notes: string;
   jiraKey?: string;
 }
@@ -46,23 +46,22 @@ function buildReportData(): ReportData | null {
     let hasFail = false;
     let hasPending = false;
     let allSkip = true;
-    let hasSkip = false;
-    const verifiedModels: string[] = [];
+    const passModels: string[] = []; // 只收 pass / fixed 的機種
     let failNotes = '';
     let jiraKey = '';
 
     modelsInRound.forEach(m => {
       const r = round.results[getResultKey(caseId, m)];
       const s: TestStatus = r?.status || 'pending';
-      if (s === 'skip') { hasSkip = true; return; }
+      if (s === 'skip') return;
       allSkip = false;
       if (s === 'pass') itemPass++;
       else if (s === 'fixed') itemFixed++;
       else if (s === 'fail') itemFail++;
       else if (s === 'pending') itemPending++;
-      if (s === 'pass' || s === 'fixed' || s === 'fail') {
+      if (s === 'pass' || s === 'fixed') {
         const label = state.models.find(md => md.id === m)?.label || m;
-        verifiedModels.push(label);
+        passModels.push(label);
       }
       if (s === 'fail') {
         hasFail = true;
@@ -75,15 +74,15 @@ function buildReportData(): ReportData | null {
     if (allSkip) return;
 
     const aggregateStatus = hasFail ? 'fail' : hasPending ? 'pending' : 'pass';
-    // 通用（n/a）= 指派給 round 全部機種 且 無 skip；只要「只指派部分機種」或「有 skip」就列出驗證機種
-    const isUniversal = modelsInRound.length === round.models.length && !hasSkip;
+    // All = round 全部機種都 pass/fixed（指派全機種且全數通過）；否則只列出有 pass 的機種
+    const allModelsPass = passModels.length === round.models.length;
 
     reportCases.push({
       name: tc.name,
       category: tc.category,
       aggregateStatus,
-      verifiedModels,
-      showModels: !isUniversal,
+      verifiedModels: passModels,
+      allModelsPass,
       notes: hasFail ? failNotes : '',
       jiraKey: hasFail ? jiraKey : undefined,
     });
@@ -114,7 +113,8 @@ function statusText(s: ReportCase['aggregateStatus']): string {
 }
 
 function verifyModelsText(c: ReportCase): string {
-  return c.showModels && c.verifiedModels.length > 0 ? c.verifiedModels.join('、') : 'n/a';
+  if (c.allModelsPass) return 'All';
+  return c.verifiedModels.length > 0 ? c.verifiedModels.join('、') : '-';
 }
 
 // ── HTML 報告（列印 / 存 PDF）──
@@ -133,9 +133,11 @@ export function generateReport() {
       const bg = c.aggregateStatus === 'fail' ? '#fef2f2' : 'transparent';
       const jiraLink = c.jiraKey ? `<a href="https://cybersoft4u.atlassian.net/browse/${c.jiraKey}" style="color:#1d4ed8;font-size:11px;">${c.jiraKey}</a>` : '';
       const noteHtml = c.notes ? `<div style="font-size:11px;color:#64748b;margin-top:2px;">${escapeHtml(c.notes)}</div>` : '';
-      const verify = c.showModels && c.verifiedModels.length > 0
-        ? escapeHtml(c.verifiedModels.join('、'))
-        : '<span style="color:#94a3b8;">n/a</span>';
+      const verify = c.allModelsPass
+        ? '<span style="color:#047857;font-weight:600;">All</span>'
+        : c.verifiedModels.length > 0
+          ? escapeHtml(c.verifiedModels.join('、'))
+          : '<span style="color:#94a3b8;">-</span>';
 
       return `<tr style="background:${bg}">
         <td style="padding:6px 10px;border:1px solid #e2e8f0;text-align:center;color:#64748b;font-size:12px;">${idx}</td>
