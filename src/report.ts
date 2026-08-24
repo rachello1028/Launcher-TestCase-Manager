@@ -1,3 +1,4 @@
+import * as XLSX from 'xlsx';
 import { getState, getResultKey, getCategoryLabel, getCasesForModel } from './store';
 import type { CategoryId, TestStatus } from './types';
 
@@ -11,10 +12,23 @@ interface ReportCase {
   jiraKey?: string;
 }
 
-export function generateReport() {
+interface ReportData {
+  version: string;
+  createdAt: string;
+  orderedCats: CategoryId[];
+  grouped: Record<CategoryId, ReportCase[]>;
+  itemPass: number;
+  itemFixed: number;
+  itemFail: number;
+  itemPending: number;
+  effectiveTotal: number;
+}
+
+// 共用彙總：跨機種去重成一案例一列，逐機種計數與統計總覽同口徑（扣掉 skip）
+function buildReportData(): ReportData | null {
   const state = getState();
   const round = state.rounds.find(r => r.id === state.activeRoundId);
-  if (!round) return;
+  if (!round) return null;
 
   const allCaseIds = new Set<string>();
   round.models.forEach(m => {
@@ -22,7 +36,6 @@ export function generateReport() {
   });
 
   const reportCases: ReportCase[] = [];
-  // 逐機種計數（與統計總覽同口徑，扣掉 skip）
   let itemPass = 0, itemFixed = 0, itemFail = 0, itemPending = 0;
 
   allCaseIds.forEach(caseId => {
@@ -75,34 +88,58 @@ export function generateReport() {
   });
 
   const grouped: Record<CategoryId, ReportCase[]> = {};
+  const orderedCats: CategoryId[] = [];
   reportCases.forEach(c => {
-    if (!grouped[c.category]) grouped[c.category] = [];
+    if (!grouped[c.category]) { grouped[c.category] = []; orderedCats.push(c.category); }
     grouped[c.category].push(c);
   });
 
-  // 摘要用逐機種口徑，與統計總覽一致
-  const effectiveTotal = itemPass + itemFixed + itemFail + itemPending;
+  return {
+    version: round.version,
+    createdAt: round.createdAt,
+    orderedCats,
+    grouped,
+    itemPass,
+    itemFixed,
+    itemFail,
+    itemPending,
+    effectiveTotal: itemPass + itemFixed + itemFail + itemPending,
+  };
+}
+
+function statusText(s: ReportCase['aggregateStatus']): string {
+  return s === 'pass' ? 'Pass' : s === 'fail' ? 'Fail' : '待測';
+}
+
+function verifyModelsText(c: ReportCase): string {
+  return c.hasSkip && c.verifiedModels.length > 0 ? c.verifiedModels.join('、') : 'n/a';
+}
+
+// ── HTML 報告（列印 / 存 PDF）──
+
+export function generateReport() {
+  const data = buildReportData();
+  if (!data) return;
+  const { version, createdAt, orderedCats, grouped, itemPass, itemFixed, itemFail, itemPending, effectiveTotal } = data;
   const today = new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' });
 
   let idx = 0;
-  const categoryRows = Object.keys(grouped).map(cat => {
-    const cases = grouped[cat as CategoryId];
-    const rows = cases.map(c => {
+  const categoryRows = orderedCats.map(cat => {
+    const rows = grouped[cat].map(c => {
       idx++;
-      const statusText = c.aggregateStatus === 'pass' ? 'Pass' : c.aggregateStatus === 'fail' ? 'Fail' : '待測';
-      const statusColor = c.aggregateStatus === 'pass' ? '#047857' : c.aggregateStatus === 'fail' ? '#b91c1c' : '#92400e';
-      const statusBg = c.aggregateStatus === 'fail' ? '#fef2f2' : 'transparent';
+      const color = c.aggregateStatus === 'pass' ? '#047857' : c.aggregateStatus === 'fail' ? '#b91c1c' : '#92400e';
+      const bg = c.aggregateStatus === 'fail' ? '#fef2f2' : 'transparent';
       const jiraLink = c.jiraKey ? `<a href="https://cybersoft4u.atlassian.net/browse/${c.jiraKey}" style="color:#1d4ed8;font-size:11px;">${c.jiraKey}</a>` : '';
       const noteHtml = c.notes ? `<div style="font-size:11px;color:#64748b;margin-top:2px;">${escapeHtml(c.notes)}</div>` : '';
-      const verifyText = c.hasSkip && c.verifiedModels.length > 0
+      const verify = c.hasSkip && c.verifiedModels.length > 0
         ? escapeHtml(c.verifiedModels.join('、'))
         : '<span style="color:#94a3b8;">n/a</span>';
 
-      return `<tr style="background:${statusBg}">
+      return `<tr style="background:${bg}">
         <td style="padding:6px 10px;border:1px solid #e2e8f0;text-align:center;color:#64748b;font-size:12px;">${idx}</td>
         <td style="padding:6px 10px;border:1px solid #e2e8f0;font-size:13px;">${escapeHtml(c.name)}${noteHtml}</td>
-        <td style="padding:6px 10px;border:1px solid #e2e8f0;font-size:12px;color:#475569;">${verifyText}</td>
-        <td style="padding:6px 10px;border:1px solid #e2e8f0;text-align:center;font-weight:600;color:${statusColor};font-size:13px;">${statusText}</td>
+        <td style="padding:6px 10px;border:1px solid #e2e8f0;font-size:12px;color:#475569;">${verify}</td>
+        <td style="padding:6px 10px;border:1px solid #e2e8f0;text-align:center;font-weight:600;color:${color};font-size:13px;">${statusText(c.aggregateStatus)}</td>
         <td style="padding:6px 10px;border:1px solid #e2e8f0;font-size:11px;color:#64748b;">${jiraLink}</td>
       </tr>`;
     }).join('');
@@ -116,7 +153,7 @@ export function generateReport() {
 <html lang="zh-TW">
 <head>
 <meta charset="utf-8">
-<title>${escapeHtml(round.version)} 回歸測試報告</title>
+<title>${escapeHtml(version)} 回歸測試報告</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: "Microsoft JhengHei", "PingFang TC", sans-serif; background: #fff; color: #1e293b; padding: 40px; }
@@ -135,11 +172,11 @@ export function generateReport() {
 </head>
 <body>
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-    <h1 style="font-size:20px;font-weight:700;">${escapeHtml(round.version)} 回歸測試報告</h1>
+    <h1 style="font-size:20px;font-weight:700;">${escapeHtml(version)} 回歸測試報告</h1>
     <button class="no-print" onclick="window.print()" style="padding:8px 20px;border:1px solid #cbd5e1;border-radius:6px;background:#f8fafc;cursor:pointer;font-size:13px;">列印 / 存 PDF</button>
   </div>
   <div style="font-size:13px;color:#64748b;margin-bottom:20px;">
-    報告日期：${today}　｜　建立日期：${new Date(round.createdAt).toLocaleDateString('zh-TW')}
+    報告日期：${today}　｜　建立日期：${new Date(createdAt).toLocaleDateString('zh-TW')}
   </div>
 
   <div class="summary-grid">
@@ -186,24 +223,70 @@ export function generateReport() {
 </body>
 </html>`;
 
-  // 用 Blob URL 開新分頁（比 window.open('')+document.write 更不易被彈窗攔截）
   const blob = new Blob([html], { type: 'text/html' });
   const url = URL.createObjectURL(blob);
   const win = window.open(url, '_blank');
   if (win) {
-    // 分頁載入後釋放，避免立即 revoke 導致空白
     setTimeout(() => URL.revokeObjectURL(url), 60000);
   } else {
-    // 仍被攔截 → fallback 下載成 HTML 檔
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${round.version.replace(/\s+/g, '_') || 'report'}_${new Date().toISOString().slice(0, 10)}.html`;
+    a.download = `${version.replace(/\s+/g, '_') || 'report'}_${new Date().toISOString().slice(0, 10)}.html`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(url), 60000);
     alert('瀏覽器阻擋了新分頁，已改為下載報告 HTML 檔，開啟即可列印或存 PDF。');
   }
+}
+
+// ── Excel 報告（.xlsx，分類分組）──
+
+export function generateExcel() {
+  const data = buildReportData();
+  if (!data) return;
+  const { version, createdAt, orderedCats, grouped, itemPass, itemFixed, itemFail, itemPending, effectiveTotal } = data;
+  const today = new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' });
+
+  const aoa: (string | number)[][] = [];
+  const merges: XLSX.Range[] = [];
+  const COLS = 5;
+
+  // 標題列
+  aoa.push([`${version} 回歸測試報告`]);
+  merges.push({ s: { r: 0, c: 0 }, e: { r: 0, c: COLS - 1 } });
+  aoa.push([`報告日期：${today}`, '', `建立日期：${new Date(createdAt).toLocaleDateString('zh-TW')}`]);
+  aoa.push([]);
+
+  // 摘要（標籤列 + 數值列）
+  aoa.push(['需驗證', '通過', '失敗', '已修復', '待測']);
+  aoa.push([effectiveTotal, itemPass, itemFail, itemFixed, itemPending]);
+  aoa.push([]);
+
+  // 表頭
+  aoa.push(['#', '測試案例', '驗證機種', '結果', 'Issue']);
+
+  // 分類分組
+  let idx = 0;
+  orderedCats.forEach(cat => {
+    const catRow = aoa.length;
+    aoa.push([getCategoryLabel(cat)]);
+    merges.push({ s: { r: catRow, c: 0 }, e: { r: catRow, c: COLS - 1 } });
+    grouped[cat].forEach(c => {
+      idx++;
+      const name = c.notes ? `${c.name}（${c.notes}）` : c.name;
+      aoa.push([idx, name, verifyModelsText(c), statusText(c.aggregateStatus), c.jiraKey || '']);
+    });
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!merges'] = merges;
+  ws['!cols'] = [{ wch: 5 }, { wch: 46 }, { wch: 20 }, { wch: 8 }, { wch: 12 }];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '回歸測試');
+  const fname = `${version.replace(/\s+/g, '_') || 'report'}_回歸測試報告_${new Date().toISOString().slice(0, 10)}.xlsx`;
+  XLSX.writeFile(wb, fname);
 }
 
 function escapeHtml(s: string): string {

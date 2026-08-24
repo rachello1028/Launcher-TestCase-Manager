@@ -8,9 +8,9 @@ import { RoundList } from './components/RoundList';
 import { CreateRound } from './components/CreateRound';
 import { ModelManager } from './components/ModelManager';
 import { exportAllData, importData } from './store';
-import { generateReport } from './report';
+import { generateReport, generateExcel } from './report';
 import { useStore } from './hooks/useStore';
-import { LayoutDashboard, ClipboardList, Settings, Plus, Download, Upload, FolderOpen, Smartphone, FileText } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, Settings, Plus, Download, Upload, FolderOpen, Smartphone, FileText, FileSpreadsheet } from 'lucide-react';
 
 type Tab = 'dashboard' | 'checklist' | 'cases' | 'rounds';
 
@@ -79,9 +79,16 @@ export default function App() {
               <button
                 onClick={generateReport}
                 className="h-[34px] px-2.5 rounded-md text-fg-muted hover:bg-surface-3 hover:text-fg transition-colors flex items-center"
-                title="產生測試報告"
+                title="產生測試報告（列印 / PDF）"
               >
                 <FileText size={16} />
+              </button>
+              <button
+                onClick={generateExcel}
+                className="h-[34px] px-2.5 rounded-md text-fg-muted hover:bg-surface-3 hover:text-fg transition-colors flex items-center"
+                title="匯出 Excel"
+              >
+                <FileSpreadsheet size={16} />
               </button>
               <button
                 onClick={exportAllData}
