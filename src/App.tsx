@@ -8,16 +8,20 @@ import { RoundList } from './components/RoundList';
 import { CreateRound } from './components/CreateRound';
 import { ModelManager } from './components/ModelManager';
 import { ProjectSwitcher } from './components/ProjectSwitcher';
+import { ScriptDashboard } from './components/ScriptDashboard';
+import { ScriptChecklist } from './components/ScriptChecklist';
+import { ScriptCaseManager } from './components/ScriptCaseManager';
+import { CreateScriptRound } from './components/CreateScriptRound';
 import { exportAllData, importData } from './store';
 import { generateReport, generateExcel } from './report';
 import { useStore } from './hooks/useStore';
-import { LayoutDashboard, ClipboardList, Settings, Plus, Download, Upload, FolderOpen, Smartphone, FileText, FileSpreadsheet, ListChecks } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, Settings, Plus, Download, Upload, FolderOpen, Smartphone, FileText, FileSpreadsheet } from 'lucide-react';
 
 type Tab = 'dashboard' | 'checklist' | 'cases' | 'rounds';
 
-const TABS: { id: Tab; label: string; icon: typeof LayoutDashboard }[] = [
+const TABS: { id: Tab; label: string; scriptLabel?: string; icon: typeof LayoutDashboard }[] = [
   { id: 'dashboard', label: '統計總覽', icon: LayoutDashboard },
-  { id: 'checklist', label: '測試 Checklist', icon: ClipboardList },
+  { id: 'checklist', label: '測試 Checklist', scriptLabel: '測試執行', icon: ClipboardList },
   { id: 'cases', label: '案例管理', icon: Settings },
   { id: 'rounds', label: '測試回合', icon: FolderOpen },
 ];
@@ -67,14 +71,14 @@ export default function App() {
               )}
             </div>
             <div className="flex items-center gap-1">
+              <button
+                onClick={() => setShowCreate(true)}
+                className="h-[34px] px-3 rounded-md text-sm font-medium bg-surface border border-border text-fg-muted hover:bg-surface-3 hover:text-fg transition-colors flex items-center gap-1.5"
+              >
+                <Plus size={16} /> 新回合
+              </button>
               {!isScript && (
                 <>
-                  <button
-                    onClick={() => setShowCreate(true)}
-                    className="h-[34px] px-3 rounded-md text-sm font-medium bg-surface border border-border text-fg-muted hover:bg-surface-3 hover:text-fg transition-colors flex items-center gap-1.5"
-                  >
-                    <Plus size={16} /> 新回合
-                  </button>
                   <button
                     onClick={() => setShowModels(true)}
                     className="h-[34px] px-2.5 rounded-md text-fg-muted hover:bg-surface-3 hover:text-fg transition-colors flex items-center"
@@ -118,11 +122,12 @@ export default function App() {
             </div>
           </div>
 
-          {/* Tab bar（矩陣模式專用） */}
+          {/* Tab bar */}
           <div className="flex gap-1 -mb-px h-10">
-            {!isScript && TABS.map(t => {
+            {TABS.map(t => {
               const Icon = t.icon;
               const active = tab === t.id;
+              const label = isScript && t.scriptLabel ? t.scriptLabel : t.label;
               return (
                 <button
                   key={t.id}
@@ -134,7 +139,7 @@ export default function App() {
                     }`}
                 >
                   <Icon size={16} />
-                  {t.label}
+                  {label}
                 </button>
               );
             })}
@@ -145,14 +150,12 @@ export default function App() {
       {/* Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
         {isScript ? (
-          <div className="flex flex-col items-center justify-center py-24 text-center">
-            <ListChecks size={48} className="mb-4 text-fg-subtle" />
-            <p className="text-lg font-medium text-fg">「{project.name}」使用步驟腳本模式</p>
-            <p className="text-sm text-fg-muted mt-2 max-w-md">
-              步驟腳本測試（前置條件 / 測試步驟 / 預期 vs 實際結果）正在開發中（Phase 2）。<br />
-              目前可先建立此類專案，資料結構已就緒。
-            </p>
-          </div>
+          <>
+            {tab === 'dashboard' && <ScriptDashboard />}
+            {tab === 'checklist' && <ScriptChecklist onCreateRound={() => setShowCreate(true)} />}
+            {tab === 'cases' && <ScriptCaseManager />}
+            {tab === 'rounds' && <RoundList />}
+          </>
         ) : (
           <>
             {tab === 'dashboard' && <Dashboard onNavigate={navigateToChecklist} />}
@@ -163,7 +166,7 @@ export default function App() {
         )}
       </main>
 
-      {showCreate && <CreateRound onClose={() => setShowCreate(false)} />}
+      {showCreate && (isScript ? <CreateScriptRound onClose={() => setShowCreate(false)} /> : <CreateRound onClose={() => setShowCreate(false)} />)}
       {showModels && <ModelManager onClose={() => setShowModels(false)} />}
     </div>
   );

@@ -1,4 +1,4 @@
-import type { AppState, Project, TestMode, TestCase, TestRound, TestResult, ModelId, TestStatus, CategoryId } from './types';
+import type { AppState, Project, TestMode, TestCase, TestRound, TestResult, ScriptResult, ModelId, TestStatus, CategoryId } from './types';
 import { DEFAULT_CASES } from './masterData';
 import { DEFAULT_MODELS, DEFAULT_CATEGORIES } from './types';
 
@@ -114,7 +114,7 @@ export function createProject(name: string, testMode: TestMode): Project {
     rounds: [],
     activeRoundId: null,
     models: [],
-    categories: testMode === 'matrix' ? DEFAULT_CATEGORIES : [],
+    categories: testMode === 'matrix' ? DEFAULT_CATEGORIES : [{ id: 'general', label: '測試項目' }],
   };
   _state = { ..._state, projects: [..._state.projects, proj], activeProjectId: proj.id };
   notify();
@@ -311,6 +311,47 @@ export function skipOtherModels(roundId: string, caseId: string, currentModelId:
     }));
   }
   return skipped;
+}
+
+// ── Script results（腳本模式，作用於當前專案）──
+
+export function updateScriptResult(roundId: string, caseId: string, patch: Partial<ScriptResult>) {
+  updateActiveProject(pr => ({
+    ...pr,
+    rounds: pr.rounds.map(r => {
+      if (r.id !== roundId) return r;
+      const existing: ScriptResult = r.scriptResults?.[caseId] || { caseId, status: 'pending', stepActuals: {}, notes: '' };
+      return {
+        ...r,
+        scriptResults: {
+          ...r.scriptResults,
+          [caseId]: { ...existing, ...patch, caseId, updatedAt: new Date().toISOString() },
+        },
+      };
+    }),
+  }));
+}
+
+export function setScriptStepActual(roundId: string, caseId: string, stepId: string, actual: string) {
+  updateActiveProject(pr => ({
+    ...pr,
+    rounds: pr.rounds.map(r => {
+      if (r.id !== roundId) return r;
+      const existing: ScriptResult = r.scriptResults?.[caseId] || { caseId, status: 'pending', stepActuals: {}, notes: '' };
+      return {
+        ...r,
+        scriptResults: {
+          ...r.scriptResults,
+          [caseId]: {
+            ...existing,
+            caseId,
+            stepActuals: { ...existing.stepActuals, [stepId]: actual },
+            updatedAt: new Date().toISOString(),
+          },
+        },
+      };
+    }),
+  }));
 }
 
 // ── Case management（作用於當前專案）──

@@ -34,13 +34,24 @@ export const DEFAULT_CATEGORIES: CategoryDef[] = [
   { id: 'statusbar', label: 'Status / Navigation Bar' },
 ];
 
+// 腳本模式：一個測試步驟（操作 + 預期結果）
+export interface TestStep {
+  id: string;
+  action: string;
+  expected: string;
+}
+
 export interface TestCase {
   id: string;
   category: CategoryId;
   name: string;
   parentId?: string;
-  models: ModelId[];
-  requiredModels?: number;
+  models: ModelId[];         // 矩陣模式用
+  requiredModels?: number;   // 矩陣模式用
+  // 腳本模式用
+  precondition?: string;
+  steps?: TestStep[];
+  environments?: string[];
 }
 
 export type TestStatus = 'pass' | 'fail' | 'fixed' | 'skip' | 'pending';
@@ -54,12 +65,26 @@ export interface TestResult {
   updatedAt?: string;
 }
 
+// 腳本模式：一條案例的執行結果（總狀態 + 每步實際結果）
+export type ScriptStatus = 'pass' | 'fail' | 'blocked' | 'pending';
+
+export interface ScriptResult {
+  caseId: string;
+  status: ScriptStatus;
+  stepActuals: Record<string, string>; // stepId → 實際結果
+  notes: string;
+  jiraKey?: string;
+  environment?: string;
+  updatedAt?: string;
+}
+
 export interface TestRound {
   id: string;
   version: string;
   models: ModelId[];
   createdAt: string;
-  results: Record<string, TestResult>;
+  results: Record<string, TestResult>;          // 矩陣模式：key = caseId__modelId
+  scriptResults?: Record<string, ScriptResult>; // 腳本模式：key = caseId
 }
 
 export type TestMode = 'matrix' | 'script';
