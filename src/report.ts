@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx';
-import { getState, getResultKey, getCategoryLabel, getCasesForModel } from './store';
+import { getActiveProject, getResultKey, getCategoryLabel, getCasesForModel } from './store';
 import type { CategoryId, TestStatus } from './types';
 
 interface ReportCase {
@@ -26,7 +26,8 @@ interface ReportData {
 
 // 共用彙總：跨機種去重成一案例一列，逐機種計數與統計總覽同口徑（扣掉 skip）
 function buildReportData(): ReportData | null {
-  const state = getState();
+  const state = getActiveProject();
+  if (!state) return null;
   const round = state.rounds.find(r => r.id === state.activeRoundId);
   if (!round) return null;
 

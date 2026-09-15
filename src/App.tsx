@@ -7,10 +7,11 @@ import { CaseManager } from './components/CaseManager';
 import { RoundList } from './components/RoundList';
 import { CreateRound } from './components/CreateRound';
 import { ModelManager } from './components/ModelManager';
+import { ProjectSwitcher } from './components/ProjectSwitcher';
 import { exportAllData, importData } from './store';
 import { generateReport, generateExcel } from './report';
 import { useStore } from './hooks/useStore';
-import { LayoutDashboard, ClipboardList, Settings, Plus, Download, Upload, FolderOpen, Smartphone, FileText, FileSpreadsheet } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, Settings, Plus, Download, Upload, FolderOpen, Smartphone, FileText, FileSpreadsheet, ListChecks } from 'lucide-react';
 
 type Tab = 'dashboard' | 'checklist' | 'cases' | 'rounds';
 
@@ -32,8 +33,10 @@ export default function App() {
     setTab('checklist');
   }, []);
   const fileRef = useRef<HTMLInputElement>(null);
-  const { activeRoundId, rounds } = useStore();
+  const project = useStore();
+  const { activeRoundId, rounds } = project;
   const activeRound = rounds.find(r => r.id === activeRoundId);
+  const isScript = project.testMode === 'script';
 
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -55,7 +58,8 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="flex items-center justify-between h-14">
             <div className="flex items-center gap-3">
-              <h1 className="text-lg font-semibold text-fg tracking-tight">Launcher Test Manager</h1>
+              <h1 className="text-lg font-semibold text-fg tracking-tight hidden sm:block">Test Manager</h1>
+              <ProjectSwitcher />
               {activeRound && (
                 <span className="text-xs px-2.5 py-1 rounded-full bg-blue-soft text-blue-ink border border-blue-line font-medium">
                   {activeRound.version}
@@ -63,33 +67,37 @@ export default function App() {
               )}
             </div>
             <div className="flex items-center gap-1">
-              <button
-                onClick={() => setShowCreate(true)}
-                className="h-[34px] px-3 rounded-md text-sm font-medium bg-surface border border-border text-fg-muted hover:bg-surface-3 hover:text-fg transition-colors flex items-center gap-1.5"
-              >
-                <Plus size={16} /> 新回合
-              </button>
-              <button
-                onClick={() => setShowModels(true)}
-                className="h-[34px] px-2.5 rounded-md text-fg-muted hover:bg-surface-3 hover:text-fg transition-colors flex items-center"
-                title="管理機型"
-              >
-                <Smartphone size={16} />
-              </button>
-              <button
-                onClick={generateReport}
-                className="h-[34px] px-2.5 rounded-md text-fg-muted hover:bg-surface-3 hover:text-fg transition-colors flex items-center"
-                title="產生測試報告（列印 / PDF）"
-              >
-                <FileText size={16} />
-              </button>
-              <button
-                onClick={generateExcel}
-                className="h-[34px] px-2.5 rounded-md text-fg-muted hover:bg-surface-3 hover:text-fg transition-colors flex items-center"
-                title="匯出 Excel"
-              >
-                <FileSpreadsheet size={16} />
-              </button>
+              {!isScript && (
+                <>
+                  <button
+                    onClick={() => setShowCreate(true)}
+                    className="h-[34px] px-3 rounded-md text-sm font-medium bg-surface border border-border text-fg-muted hover:bg-surface-3 hover:text-fg transition-colors flex items-center gap-1.5"
+                  >
+                    <Plus size={16} /> 新回合
+                  </button>
+                  <button
+                    onClick={() => setShowModels(true)}
+                    className="h-[34px] px-2.5 rounded-md text-fg-muted hover:bg-surface-3 hover:text-fg transition-colors flex items-center"
+                    title="管理機型"
+                  >
+                    <Smartphone size={16} />
+                  </button>
+                  <button
+                    onClick={generateReport}
+                    className="h-[34px] px-2.5 rounded-md text-fg-muted hover:bg-surface-3 hover:text-fg transition-colors flex items-center"
+                    title="產生測試報告（列印 / PDF）"
+                  >
+                    <FileText size={16} />
+                  </button>
+                  <button
+                    onClick={generateExcel}
+                    className="h-[34px] px-2.5 rounded-md text-fg-muted hover:bg-surface-3 hover:text-fg transition-colors flex items-center"
+                    title="匯出 Excel"
+                  >
+                    <FileSpreadsheet size={16} />
+                  </button>
+                </>
+              )}
               <button
                 onClick={exportAllData}
                 className="h-[34px] px-2.5 rounded-md text-fg-muted hover:bg-surface-3 hover:text-fg transition-colors flex items-center"
@@ -110,9 +118,9 @@ export default function App() {
             </div>
           </div>
 
-          {/* Tab bar */}
+          {/* Tab bar（矩陣模式專用） */}
           <div className="flex gap-1 -mb-px h-10">
-            {TABS.map(t => {
+            {!isScript && TABS.map(t => {
               const Icon = t.icon;
               const active = tab === t.id;
               return (
@@ -136,10 +144,23 @@ export default function App() {
 
       {/* Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
-        {tab === 'dashboard' && <Dashboard onNavigate={navigateToChecklist} />}
-        {tab === 'checklist' && <Checklist nav={checklistNav} onNavConsumed={() => setChecklistNav(null)} />}
-        {tab === 'cases' && <CaseManager />}
-        {tab === 'rounds' && <RoundList />}
+        {isScript ? (
+          <div className="flex flex-col items-center justify-center py-24 text-center">
+            <ListChecks size={48} className="mb-4 text-fg-subtle" />
+            <p className="text-lg font-medium text-fg">「{project.name}」使用步驟腳本模式</p>
+            <p className="text-sm text-fg-muted mt-2 max-w-md">
+              步驟腳本測試（前置條件 / 測試步驟 / 預期 vs 實際結果）正在開發中（Phase 2）。<br />
+              目前可先建立此類專案，資料結構已就緒。
+            </p>
+          </div>
+        ) : (
+          <>
+            {tab === 'dashboard' && <Dashboard onNavigate={navigateToChecklist} />}
+            {tab === 'checklist' && <Checklist nav={checklistNav} onNavConsumed={() => setChecklistNav(null)} />}
+            {tab === 'cases' && <CaseManager />}
+            {tab === 'rounds' && <RoundList />}
+          </>
+        )}
       </main>
 
       {showCreate && <CreateRound onClose={() => setShowCreate(false)} />}

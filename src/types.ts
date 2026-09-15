@@ -62,10 +62,20 @@ export interface TestRound {
   results: Record<string, TestResult>;
 }
 
-export interface AppState {
+export type TestMode = 'matrix' | 'script';
+
+export interface Project {
+  id: string;
+  name: string;
+  testMode: TestMode;
   masterCases: TestCase[];
   rounds: TestRound[];
   activeRoundId: string | null;
   models: ModelDef[];
   categories: CategoryDef[];
+}
+
+export interface AppState {
+  projects: Project[];
+  activeProjectId: string | null;
 }
