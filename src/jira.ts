@@ -1,3 +1,5 @@
+import { fetchWithAppToken } from './appToken';
+
 interface JiraResult {
   success: true;
   key: string;
@@ -14,7 +16,7 @@ export async function createJiraIssue(
   description: string,
 ): Promise<JiraResult | JiraError> {
   try {
-    const res = await fetch('/api/jira-create-issue', {
+    const res = await fetchWithAppToken('/api/jira-create-issue', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ summary, description }),
