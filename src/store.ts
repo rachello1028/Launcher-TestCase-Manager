@@ -66,8 +66,18 @@ function loadState(): AppState {
   return defaultState();
 }
 
+let _lastSaveAlert = 0;
 function saveState(state: AppState) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch (err) {
+    // 連續操作時不要一直跳，30 秒內只提醒一次
+    if (Date.now() - _lastSaveAlert > 30_000) {
+      _lastSaveAlert = Date.now();
+      const why = err instanceof DOMException && err.name === 'QuotaExceededError' ? '瀏覽器儲存空間已滿' : String(err);
+      alert(`存檔失敗：${why}\n剛才的修改只在這個分頁裡，重新整理就會不見。請先按「匯出所有資料」備份。`);
+    }
+  }
 }
 
 let _state = loadState();

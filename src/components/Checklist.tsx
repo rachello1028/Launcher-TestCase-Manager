@@ -309,7 +309,7 @@ export function Checklist({ nav, onNavConsumed }: ChecklistProps) {
                             className="p-1.5 rounded text-red-ink hover:bg-red-soft disabled:opacity-50"
                             title="建立 Jira Issue"
                           >
-                            {creatingJira === key ? <Loader2 size={14} className="animate-spin" /> : <ExternalLink size={14} />}
+                            {creatingJira === key ? <Loader2 size={14} className="animate-spin motion-reduce:animate-none" /> : <ExternalLink size={14} />}
                           </button>
                         )}
                         {result?.jiraKey && (

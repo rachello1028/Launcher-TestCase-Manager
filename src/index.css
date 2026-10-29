@@ -52,7 +52,7 @@
   --color-indigo-ink: #a5b4fc; --color-indigo-soft: rgba(49,46,129,.4); --color-indigo-line: rgba(55,48,163,.5);
 }
 
-html, body { background-color: var(--color-canvas); color: var(--color-fg); }
+html, body { background-color: var(--color-canvas); color: var(--color-fg); overflow-x: clip; }
 
 input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
 textarea,

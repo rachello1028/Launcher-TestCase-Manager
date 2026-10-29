@@ -64,7 +64,7 @@ export function ScriptDashboard() {
             <span className="font-mono font-medium text-fg">{pct}%</span>
           </div>
           <div className="h-2.5 bg-surface-3 rounded-full overflow-hidden">
-            <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: pct === 100 ? '#16a34a' : 'var(--color-primary)' }} />
+            <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: pct === 100 ? '#16a34a' : 'var(--color-primary)' }} />
           </div>
         </div>
       </div>
@@ -82,7 +82,7 @@ export function ScriptDashboard() {
                 <div key={cat} className="flex items-center gap-3 text-sm">
                   <span className="w-44 text-fg-muted truncate">{getCategoryLabel(cat)}</span>
                   <div className="flex-1 h-1.5 bg-surface-3 rounded-full overflow-hidden">
-                    <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${cpct}%` }} />
+                    <div className="h-full bg-primary rounded-full" style={{ width: `${cpct}%` }} />
                   </div>
                   <span className="w-16 text-right font-mono text-fg-subtle">{d.pass}/{d.total}</span>
                 </div>

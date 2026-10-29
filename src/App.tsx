@@ -45,6 +45,10 @@ export default function App() {
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (!confirm(`匯入「${file.name}」會取代目前所有專案、案例和測試回合，無法復原。\n\n建議先按「匯出所有資料」備份。確定要匯入嗎？`)) {
+      e.target.value = '';
+      return;
+    }
     const reader = new FileReader();
     reader.onload = () => {
       const ok = importData(reader.result as string);
@@ -73,9 +77,10 @@ export default function App() {
             <div className="flex items-center gap-1">
               <button
                 onClick={() => setShowCreate(true)}
-                className="h-[34px] px-3 rounded-md text-sm font-medium bg-surface border border-border text-fg-muted hover:bg-surface-3 hover:text-fg transition-colors flex items-center gap-1.5"
+                className="h-[34px] px-3 rounded-md text-sm font-medium bg-surface border border-border text-fg-muted hover:bg-surface-3 hover:text-fg transition-colors flex items-center gap-1.5 whitespace-nowrap"
+                aria-label="新回合"
               >
-                <Plus size={16} /> 新回合
+                <Plus size={16} /> <span className="hidden sm:inline">新回合</span>
               </button>
               {!isScript && (
                 <>
@@ -123,7 +128,7 @@ export default function App() {
           </div>
 
           {/* Tab bar */}
-          <div className="flex gap-1 -mb-px h-10">
+          <div className="flex gap-1 -mb-px h-10 overflow-x-auto">
             {TABS.map(t => {
               const Icon = t.icon;
               const active = tab === t.id;
@@ -132,7 +137,7 @@ export default function App() {
                 <button
                   key={t.id}
                   onClick={() => setTab(t.id)}
-                  className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors
+                  className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 whitespace-nowrap shrink-0 transition-colors
                     ${active
                       ? 'border-primary text-fg'
                       : 'border-transparent text-fg-muted hover:text-fg hover:border-border-strong'

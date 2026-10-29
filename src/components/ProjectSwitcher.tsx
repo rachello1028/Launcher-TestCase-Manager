@@ -41,7 +41,7 @@ export function ProjectSwitcher() {
 
       {open && (
         <div className="absolute left-0 top-[34px] z-50 w-64 bg-surface-2 border border-border rounded-lg shadow-xl py-1.5">
-          <div className="px-3 py-1 text-[11px] font-medium text-fg-subtle uppercase tracking-wide">專案</div>
+          <div className="px-3 py-1 text-xs font-medium text-fg-subtle">專案</div>
           <div className="max-h-72 overflow-y-auto">
             {projects.map(p => {
               const Icon = MODE_META[p.testMode].icon;

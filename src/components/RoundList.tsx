@@ -73,7 +73,7 @@ export function RoundList() {
             <div className="flex items-center gap-2">
               <div className="flex-1 h-1.5 bg-surface-3 rounded-full overflow-hidden">
                 <div
-                  className="h-full rounded-full transition-all"
+                  className="h-full rounded-full"
                   style={{
                     width: `${pct}%`,
                     backgroundColor: pct === 100 ? '#16a34a' : 'var(--color-primary)',

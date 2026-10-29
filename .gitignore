@@ -27,3 +27,6 @@ dist-ssr
 .claude
 
 .vercel
+
+# Hallmark 檢查產物
+.hallmark/

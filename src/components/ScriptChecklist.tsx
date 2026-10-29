@@ -190,7 +190,7 @@ export function ScriptChecklist({ onCreateRound }: { onCreateRound: () => void }
                           </button>
                           {status === 'fail' && !res?.jiraKey && (
                             <button onClick={() => handleCreateJira(c.id, c.name, c.category)} disabled={creatingJira === c.id} className="p-1.5 rounded text-red-ink hover:bg-red-soft disabled:opacity-50 cursor-pointer" title="建立 Jira Issue">
-                              {creatingJira === c.id ? <Loader2 size={14} className="animate-spin" /> : <ExternalLink size={14} />}
+                              {creatingJira === c.id ? <Loader2 size={14} className="animate-spin motion-reduce:animate-none" /> : <ExternalLink size={14} />}
                             </button>
                           )}
                           {res?.jiraKey && (

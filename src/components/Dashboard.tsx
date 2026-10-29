@@ -96,7 +96,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
           </div>
           <div className="h-2.5 bg-surface-3 rounded-full overflow-hidden">
             <div
-              className="h-full rounded-full transition-all duration-500"
+              className="h-full rounded-full"
               style={{
                 width: `${overallPct}%`,
                 backgroundColor: overallPct === 100 ? '#16a34a' : 'var(--color-primary)',
@@ -138,7 +138,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
               </div>
               <div className="h-1.5 bg-surface-3 rounded-full overflow-hidden">
                 <div
-                  className="h-full rounded-full transition-all duration-500"
+                  className="h-full rounded-full"
                   style={{
                     width: `${donePct}%`,
                     backgroundColor: donePct === 100 ? '#16a34a' : 'var(--color-primary)',
@@ -163,7 +163,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                 <span className="w-44 text-fg-muted truncate">{getCategoryLabel(cat)}</span>
                 <div className="flex-1 h-1.5 bg-surface-3 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-primary rounded-full transition-all"
+                    className="h-full bg-primary rounded-full"
                     style={{ width: `${pct}%` }}
                   />
                 </div>
@@ -177,15 +177,27 @@ export function Dashboard({ onNavigate }: DashboardProps) {
   );
 }
 
-function StatCard({ icon, label, value, color, onClick }: { icon: React.ReactNode; label: string; value: number; color: string; onClick?: () => void }) {
-  const cls = `bg-${color}-soft border border-${color}-line rounded-lg p-3 flex items-center gap-3${onClick ? ' cursor-pointer hover:brightness-95 transition-all' : ''}`;
-  return (
-    <div className={cls} onClick={onClick} role={onClick ? 'button' : undefined}>
-      <div className={`text-${color}-ink`}>{icon}</div>
+const STAT_COLORS = {
+  blue:    { box: 'bg-blue-soft border-blue-line',       ink: 'text-blue-ink' },
+  emerald: { box: 'bg-emerald-soft border-emerald-line', ink: 'text-emerald-ink' },
+  red:     { box: 'bg-red-soft border-red-line',         ink: 'text-red-ink' },
+  sky:     { box: 'bg-sky-soft border-sky-line',         ink: 'text-sky-ink' },
+  amber:   { box: 'bg-amber-soft border-amber-line',     ink: 'text-amber-ink' },
+} as const;
+
+function StatCard({ icon, label, value, color, onClick }: { icon: React.ReactNode; label: string; value: number; color: keyof typeof STAT_COLORS; onClick?: () => void }) {
+  const c = STAT_COLORS[color];
+  const cls = `${c.box} border rounded-lg p-3 flex items-center gap-3 text-left w-full${onClick ? ' cursor-pointer hover:brightness-95 transition-[filter]' : ''}`;
+  const body = (
+    <>
+      <div className={c.ink}>{icon}</div>
       <div>
-        <p className={`text-2xl font-semibold font-mono text-${color}-ink`}>{value}</p>
+        <p className={`text-2xl font-semibold font-mono ${c.ink}`}>{value}</p>
         <p className="text-xs text-fg-muted">{label}</p>
       </div>
-    </div>
+    </>
   );
+  return onClick
+    ? <button type="button" className={cls} onClick={onClick}>{body}</button>
+    : <div className={cls}>{body}</div>;
 }
