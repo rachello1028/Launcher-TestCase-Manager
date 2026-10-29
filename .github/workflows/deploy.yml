@@ -1,0 +1,65 @@
+name: Deploy to Vercel (Production)
+
+# 取代 Vercel GitHub App 的自動部署，避免 webhook 偶發漏接導致 push 後沒部署。
+# push 到 main 一律由這條 workflow 用 Vercel CLI 建置並部署到 production。
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}   # 允許在 GitHub Actions 頁面手動觸發
+
+# 同分支新的部署會取消進行中的舊部署，避免競態覆蓋
+concurrency:
+  group: vercel-prod
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Pull Vercel project settings
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build (production)
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deploy prebuilt to production
+        id: deploy
+        run: |
+          url=$(vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }})
+          echo "已部署: $url"
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+
+      # 保險：確認正式網址指到這次部署，沒有就 promote，避免它停在 Staged
+      # 導致 push+build 成功但正式網址沒更新。
+      # 直接打 Vercel REST API：team 專用的 token 跑 `vercel promote` 會先查個人帳號而回
+      # "User not found (404)"，API 帶 teamId 就沒這個問題。
+      - name: Promote to production (current)
+        env:
+          TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          DEPLOY_URL: ${{ steps.deploy.outputs.url }}
+        run: |
+          api() { curl -sS -H "Authorization: Bearer $TOKEN" "$@"; }
+          host="${DEPLOY_URL#https://}"
+          dep_id=$(api "https://api.vercel.com/v13/deployments/$host?teamId=$VERCEL_ORG_ID" | jq -r '.id')
+          cur_id=$(api "https://api.vercel.com/v9/projects/$VERCEL_PROJECT_ID?teamId=$VERCEL_ORG_ID" | jq -r '.targets.production.id')
+          echo "這次部署: $dep_id / 目前正式: $cur_id"
+          if [ -z "$dep_id" ] || [ "$dep_id" = "null" ]; then echo "查不到這次部署的 id"; exit 1; fi
+          if [ "$dep_id" = "$cur_id" ]; then echo "(此部署已是 current production，無需 promote)"; exit 0; fi
+          code=$(api -o /tmp/promote.json -w '%{http_code}' -X POST "https://api.vercel.com/v10/projects/$VERCEL_PROJECT_ID/promote/$dep_id?teamId=$VERCEL_ORG_ID")
+          cat /tmp/promote.json; echo
+          case "$code" in 2*) echo "已 promote";; *) echo "promote 失敗 (HTTP $code)"; exit 1;; esac
